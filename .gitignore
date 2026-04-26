@@ -1,0 +1,15 @@
+# FLUFF
+.codex
+.tmp/
+docs/
+
+# Frontend Stuff
+node_modules
+.nuxt
+.output
+
+# Backend Stuff
+
+
+# Local DB
+my.local.db
