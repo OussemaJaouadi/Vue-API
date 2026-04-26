@@ -22,6 +22,7 @@ func NewServer(cfg config.Config, logger *slog.Logger) *Server {
 	router.HidePort = true
 
 	router.Use(middleware.Recover())
+	router.HTTPErrorHandler = apihttp.CustomHTTPErrorHandler
 	router.Use(requestLogger(logger))
 	router.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: cfg.CORS.AllowedOrigins,

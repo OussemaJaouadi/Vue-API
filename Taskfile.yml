@@ -1,0 +1,59 @@
+version: '3'
+
+vars:
+  GOCACHE: '{{.TASKFILE_DIR}}/.tmp/go-build'
+  GOMODCACHE: '{{.TASKFILE_DIR}}/.tmp/go-mod'
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  # Backend Tasks
+  backend:dev:
+    desc: Run backend with Air (hot-reload)
+    dir: '{{.TASKFILE_DIR}}/backend'
+    cmds:
+      - GOCACHE={{.GOCACHE}} GOMODCACHE={{.GOMODCACHE}} air
+
+  backend:test:
+    desc: Run backend tests
+    dir: '{{.TASKFILE_DIR}}/backend'
+    cmds:
+      - GOCACHE={{.GOCACHE}} GOMODCACHE={{.GOMODCACHE}} go test ./...
+
+  backend:build:
+    desc: Build backend binary
+    dir: '{{.TASKFILE_DIR}}/backend'
+    cmds:
+      - GOCACHE={{.GOCACHE}} GOMODCACHE={{.GOMODCACHE}} go build -o .tmp/api ./cmd/api/main.go
+
+  # Frontend Tasks
+  frontend:dev:
+    desc: Run frontend with Bun (hot-reload)
+    dir: '{{.TASKFILE_DIR}}/frontend'
+    cmds:
+      - bun run dev
+
+  frontend:build:
+    desc: Build frontend
+    dir: '{{.TASKFILE_DIR}}/frontend'
+    cmds:
+      - bun run build
+
+  # Global Tasks
+  dev:
+    desc: Run both backend and frontend in parallel
+    deps: [backend:dev, frontend:dev]
+
+  test:
+    desc: Run all tests
+    cmds:
+      - task: backend:test
+
+  tidy:
+    desc: Tidy go modules
+    dir: '{{.TASKFILE_DIR}}/backend'
+    cmds:
+      - GOCACHE={{.GOCACHE}} GOMODCACHE={{.GOMODCACHE}} go mod tidy
