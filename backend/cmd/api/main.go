@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,9 +16,22 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "healthcheck" {
+		if err := healthcheck(); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("invalid configuration", "error", err)
+		os.Exit(1)
+	}
+
 	server := app.NewServer(cfg, logger)
 
 	errCh := make(chan error, 1)
@@ -44,4 +58,18 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func healthcheck() error {
+	resp, err := http.Get("http://127.0.0.1:8080/healthz")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("healthcheck failed with status %d", resp.StatusCode)
+	}
+
+	return nil
 }

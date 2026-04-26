@@ -1,22 +1,19 @@
-# FLUFF
+.git
 .codex
-.tmp/
-docs/**
+.tmp
+docs
+
 .env
 .env.*
 !.env.example
 
-# Frontend Stuff
-node_modules
-.nuxt
-.output
+frontend/node_modules
+frontend/.nuxt
+frontend/.output
 
-# Backend Stuff
 backend/.env
 backend/.env.*
 !backend/.env.example
 
-
-# Local DB
 my.local.db
 my.local.db-*

@@ -23,11 +23,28 @@ func NewServer(cfg config.Config, logger *slog.Logger) *Server {
 
 	router.Use(middleware.Recover())
 	router.Use(requestLogger(logger))
+	router.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: cfg.CORS.AllowedOrigins,
+		AllowMethods: []string{
+			echo.GET,
+			echo.POST,
+			echo.PUT,
+			echo.PATCH,
+			echo.DELETE,
+			echo.OPTIONS,
+		},
+		AllowHeaders: []string{
+			echo.HeaderAuthorization,
+			echo.HeaderContentType,
+			echo.HeaderAccept,
+		},
+		AllowCredentials: true,
+	}))
 
 	apihttp.RegisterRoutes(router, cfg)
 
 	return &Server{
-		addr:   cfg.Addr,
+		addr:   cfg.HTTP.Addr,
 		router: router,
 	}
 }
