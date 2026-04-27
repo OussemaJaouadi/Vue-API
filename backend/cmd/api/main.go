@@ -32,7 +32,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	server := app.NewServer(cfg, logger)
+	server, err := app.NewServer(context.Background(), cfg, logger)
+	if err != nil {
+		logger.Error("server initialization failed", "error", err)
+		os.Exit(1)
+	}
 
 	errCh := make(chan error, 1)
 	go func() {

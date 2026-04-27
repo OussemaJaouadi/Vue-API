@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
+	"vue-api/backend/internal/auth"
 	"vue-api/backend/internal/config"
 	apihttp "vue-api/backend/internal/http"
 )
@@ -16,7 +17,7 @@ type Server struct {
 	router *echo.Echo
 }
 
-func NewServer(cfg config.Config, logger *slog.Logger) *Server {
+func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Server, error) {
 	router := echo.New()
 	router.HideBanner = true
 	router.HidePort = true
@@ -42,12 +43,42 @@ func NewServer(cfg config.Config, logger *slog.Logger) *Server {
 		AllowCredentials: true,
 	}))
 
+	users := auth.NewMemoryUserRepository()
+	passwords := auth.DefaultPasswordHasher()
+	tokens := auth.NewTokenManager(auth.TokenConfig{
+		AccessSecret:  cfg.Auth.JWTAccessSecret,
+		RefreshSecret: cfg.Auth.JWTRefreshSecret,
+		AccessTTL:     cfg.Auth.JWTAccessTTL,
+		RefreshTTL:    cfg.Auth.JWTRefreshTTL,
+		Issuer:        cfg.App.Name,
+	})
+	if err := auth.BootstrapManager(ctx, users, passwords, auth.BootstrapConfig{
+		Enabled:  cfg.Auth.BootstrapManagerEnabled,
+		Email:    cfg.Auth.BootstrapManagerEmail,
+		Username: cfg.Auth.BootstrapManagerUsername,
+		Password: cfg.Auth.BootstrapManagerPassword,
+	}); err != nil {
+		return nil, err
+	}
+
+	eventDeps := apihttp.NewEventDeps(users, tokens)
+
 	apihttp.RegisterRoutes(router, cfg)
+	apihttp.RegisterAuthRoutes(router, apihttp.AuthRouteDeps{
+		Users:               users,
+		Passwords:           passwords,
+		Tokens:              tokens,
+		Events:              eventDeps.Broker,
+		RefreshCookieName:   cfg.Auth.RefreshCookieName,
+		RefreshCookieTTL:    cfg.Auth.JWTRefreshTTL,
+		RefreshCookieSecure: cfg.Auth.RefreshCookieSecure,
+	})
+	apihttp.RegisterEventRoutes(router, eventDeps)
 
 	return &Server{
 		addr:   cfg.HTTP.Addr,
 		router: router,
-	}
+	}, nil
 }
 
 func (s *Server) Start() error {
