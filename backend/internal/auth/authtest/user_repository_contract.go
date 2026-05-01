@@ -45,6 +45,10 @@ func RunUserRepositoryContract(t *testing.T, factory UserRepositoryFactory) {
 		require.NoError(t, err)
 		require.Equal(t, user.ID, byEmail.ID)
 
+		byUsername, err := repo.FindUserByUsername(context.Background(), " OWNER ")
+		require.NoError(t, err)
+		require.Equal(t, user.ID, byUsername.ID)
+
 		byID, err := repo.FindUserByID(context.Background(), user.ID)
 		require.NoError(t, err)
 		require.Equal(t, user.Email, byID.Email)
@@ -109,6 +113,9 @@ func RunUserRepositoryContract(t *testing.T, factory UserRepositoryFactory) {
 		require.ErrorIs(t, err, auth.ErrUserNotFound)
 
 		_, err = repo.FindUserByEmail(context.Background(), "missing@example.com")
+		require.ErrorIs(t, err, auth.ErrUserNotFound)
+
+		_, err = repo.FindUserByUsername(context.Background(), "missing")
 		require.ErrorIs(t, err, auth.ErrUserNotFound)
 
 		_, err = repo.UpdateUsername(context.Background(), "missing", "new-name")

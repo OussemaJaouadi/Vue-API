@@ -61,6 +61,21 @@ func (repo *UserRepository) FindUserByEmail(ctx context.Context, email string) (
 	return toAuthUser(model), nil
 }
 
+func (repo *UserRepository) FindUserByUsername(ctx context.Context, username string) (auth.User, error) {
+	var model UserModel
+	err := repo.db.WithContext(ctx).
+		Where("username = ?", auth.NormalizeUsername(username)).
+		First(&model).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return auth.User{}, auth.ErrUserNotFound
+	}
+	if err != nil {
+		return auth.User{}, err
+	}
+
+	return toAuthUser(model), nil
+}
+
 func (repo *UserRepository) FindUserByID(ctx context.Context, userID string) (auth.User, error) {
 	var model UserModel
 	err := repo.db.WithContext(ctx).

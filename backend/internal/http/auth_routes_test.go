@@ -59,7 +59,7 @@ func TestAuthRoutesRegisterLoginRefreshAndCurrentUser(t *testing.T) {
 	require.Equal(t, "manager", registerBody["globalRole"])
 
 	loginResp := performJSON(router, http.MethodPost, "/auth/login", map[string]string{
-		"email":    "owner@example.com",
+		"login":    "owner@example.com",
 		"password": "correct horse battery staple",
 	}, "")
 	require.Equal(t, http.StatusOK, loginResp.Code)
@@ -68,6 +68,12 @@ func TestAuthRoutesRegisterLoginRefreshAndCurrentUser(t *testing.T) {
 	require.NoError(t, json.Unmarshal(loginResp.Body.Bytes(), &loginBody))
 	accessToken := loginBody["accessToken"].(string)
 	require.NotEmpty(t, accessToken)
+
+	usernameLoginResp := performJSON(router, http.MethodPost, "/auth/login", map[string]string{
+		"login":    "owner",
+		"password": "correct horse battery staple",
+	}, "")
+	require.Equal(t, http.StatusOK, usernameLoginResp.Code)
 
 	refreshCookie := findCookie(loginResp.Result().Cookies(), "refresh_token")
 	require.NotNil(t, refreshCookie)

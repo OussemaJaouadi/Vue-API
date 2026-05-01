@@ -2,7 +2,15 @@
 
 # Backend
 
-## Unreleased
+## New
+
+- Extended login to accept either email or username through a single `login` field.
+- Added username lookup to the user repository contract, memory adapter, and GORM adapter.
+- Redacted sensitive request query values from logs: `ticket`, `token`, `access_token`, and `refresh_token`.
+- Quieted expected GORM `record not found` logs.
+- Prefer username lookup before email lookup when login input does not contain `@`.
+
+## Old
 
 - Added auth routes: register, login, refresh, logout, and me.
 - Added Argon2id password hashing.
@@ -23,3 +31,15 @@
 - Added `GET /events`.
 - Added `user.registered` events for managers.
 - Removed stale `backend/internal/auth/.keep`.
+
+# Frontend
+
+## New
+
+- Added auth session state with memory-only access token storage.
+- Added refresh-cookie lifecycle through backend auth routes.
+- Added API client bearer injection and one-time refresh retry on `401`.
+- Added login and register pages.
+- Added auth-aware shell with user info and sign out.
+- Added manager and pending-workspace landing states.
+- Added SSE connection setup through backend event tickets.

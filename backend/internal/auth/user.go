@@ -44,6 +44,7 @@ type UserRepository interface {
 	CountUsers(ctx context.Context) (int, error)
 	CreateUser(ctx context.Context, params CreateUserParams) (User, error)
 	FindUserByEmail(ctx context.Context, email string) (User, error)
+	FindUserByUsername(ctx context.Context, username string) (User, error)
 	FindUserByID(ctx context.Context, id string) (User, error)
 	UpdateUsername(ctx context.Context, userID string, username string) (User, error)
 }
@@ -108,6 +109,18 @@ func (repo *MemoryUserRepository) FindUserByEmail(ctx context.Context, email str
 	defer repo.mu.RUnlock()
 
 	id, exists := repo.byEmail[NormalizeEmail(email)]
+	if !exists {
+		return User{}, ErrUserNotFound
+	}
+
+	return repo.users[id], nil
+}
+
+func (repo *MemoryUserRepository) FindUserByUsername(ctx context.Context, username string) (User, error) {
+	repo.mu.RLock()
+	defer repo.mu.RUnlock()
+
+	id, exists := repo.byUsername[NormalizeUsername(username)]
 	if !exists {
 		return User{}, ErrUserNotFound
 	}

@@ -23,6 +23,7 @@ type AuthRouteDeps struct {
 }
 
 type authRequest struct {
+	Login    string `json:"login"`
 	Email    string `json:"email"`
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -104,15 +105,15 @@ func RegisterAuthRoutes(router *echo.Echo, deps AuthRouteDeps) {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 		}
 
-		user, err := deps.Users.FindUserByEmail(c.Request().Context(), req.Email)
+		user, err := findLoginUser(c, deps.Users, req.Login)
 		if errors.Is(err, auth.ErrUserNotFound) {
-			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid email or password")
+			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid login or password")
 		}
 		if err != nil {
 			return err
 		}
 		if !user.Active || !deps.Passwords.Verify(req.Password, user.PasswordHash) {
-			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid email or password")
+			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid login or password")
 		}
 
 		return writeAuthResponse(c, deps, user, http.StatusOK)
@@ -175,6 +176,27 @@ func RegisterAuthRoutes(router *echo.Echo, deps AuthRouteDeps) {
 			"globalRole": user.GlobalRole,
 		})
 	})
+}
+
+func findLoginUser(c echo.Context, users auth.UserRepository, login string) (auth.User, error) {
+	ctx := c.Request().Context()
+	if !strings.Contains(login, "@") {
+		if user, err := users.FindUserByUsername(ctx, login); err == nil {
+			return user, nil
+		} else if !errors.Is(err, auth.ErrUserNotFound) {
+			return auth.User{}, err
+		}
+
+		return users.FindUserByEmail(ctx, login)
+	}
+
+	if user, err := users.FindUserByEmail(ctx, login); err == nil {
+		return user, nil
+	} else if !errors.Is(err, auth.ErrUserNotFound) {
+		return auth.User{}, err
+	}
+
+	return users.FindUserByUsername(ctx, login)
 }
 
 func writeAuthResponse(c echo.Context, deps AuthRouteDeps, user auth.User, status int) error {

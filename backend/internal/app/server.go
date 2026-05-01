@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"log/slog"
+	"net/url"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -128,11 +130,28 @@ func requestLogger(logger *slog.Logger) echo.MiddlewareFunc {
 		LogValuesFunc: func(c echo.Context, values middleware.RequestLoggerValues) error {
 			logger.Info("request completed",
 				"method", c.Request().Method,
-				"uri", values.URI,
+				"uri", sanitizeRequestURI(values.URI),
 				"status", values.Status,
 				"error", values.Error,
 			)
 			return nil
 		},
 	})
+}
+
+func sanitizeRequestURI(uri string) string {
+	parsed, err := url.ParseRequestURI(uri)
+	if err != nil {
+		return uri
+	}
+
+	query := parsed.Query()
+	for _, key := range []string{"access_token", "refresh_token", "token", "ticket"} {
+		if query.Has(key) {
+			query.Set(key, "[redacted]")
+		}
+	}
+	parsed.RawQuery = strings.ReplaceAll(query.Encode(), "%5Bredacted%5D", "[redacted]")
+
+	return parsed.RequestURI()
 }
