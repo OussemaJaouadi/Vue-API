@@ -12,6 +12,8 @@
 - Added scoped roles: `admin`, `developer`, `tester`.
 - Added user records with unique email and unique mutable username.
 - Switched user IDs to UUID v7.
+- Added SQLite persistence through GORM with explicit approved indexes.
+- Added explicit DB generate/plan/migrate commands without startup AutoMigrate.
 - Added bootstrap manager seeding before server startup.
 - Split env examples into app, HTTP, database, password, JWT, cookie, bootstrap, frontend, and Compose sections.
 - Added Docker Compose env propagation for backend auth config.

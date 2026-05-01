@@ -1,9 +1,11 @@
 package config
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -53,6 +55,10 @@ type CORSConfig struct {
 }
 
 func Load() (Config, error) {
+	if err := loadDotenvFiles(); err != nil {
+		return Config{}, err
+	}
+
 	cfg := Config{
 		App: AppConfig{
 			Env:  getEnv("APP_ENV", "development"),
@@ -94,6 +100,73 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func loadDotenvFiles() error {
+	if strings.EqualFold(os.Getenv("CONFIG_LOAD_DOTENV"), "false") {
+		return nil
+	}
+
+	originalEnv := currentEnvKeys()
+	for _, path := range []string{filepath.Join("..", ".env"), ".env"} {
+		if err := loadDotenvFile(path, originalEnv); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func loadDotenvFile(path string, originalEnv map[string]bool) error {
+	file, err := os.Open(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		key, value, found := strings.Cut(line, "=")
+		if !found {
+			continue
+		}
+
+		key = strings.TrimSpace(key)
+		if key == "" || originalEnv[key] {
+			continue
+		}
+
+		value = strings.TrimSpace(value)
+		value = strings.Trim(value, `"'`)
+		if err := os.Setenv(key, value); err != nil {
+			return err
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func currentEnvKeys() map[string]bool {
+	keys := make(map[string]bool)
+	for _, item := range os.Environ() {
+		key, _, found := strings.Cut(item, "=")
+		if found {
+			keys[key] = true
+		}
+	}
+
+	return keys
 }
 
 func (cfg Config) Validate() error {

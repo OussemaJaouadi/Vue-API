@@ -13,41 +13,63 @@ type BootstrapConfig struct {
 	Password string
 }
 
-func BootstrapManager(ctx context.Context, repo UserRepository, hasher PasswordHasher, cfg BootstrapConfig) error {
+const (
+	BootstrapManagerDisabled             = "disabled"
+	BootstrapManagerSkippedExistingUsers = "skipped_existing_users"
+	BootstrapManagerSeeded               = "seeded"
+)
+
+type BootstrapResult struct {
+	Status   string
+	UserID   string
+	Email    string
+	Username string
+}
+
+func BootstrapManager(ctx context.Context, repo UserRepository, hasher PasswordHasher, cfg BootstrapConfig) (BootstrapResult, error) {
 	if !cfg.Enabled {
-		return nil
+		return BootstrapResult{Status: BootstrapManagerDisabled}, nil
 	}
 
 	count, err := repo.CountUsers(ctx)
 	if err != nil {
-		return err
+		return BootstrapResult{}, err
 	}
 	if count > 0 {
-		return nil
+		return BootstrapResult{Status: BootstrapManagerSkippedExistingUsers}, nil
 	}
 
 	email := NormalizeEmail(cfg.Email)
 	if email == "" || !strings.Contains(email, "@") {
-		return errors.New("BOOTSTRAP_MANAGER_EMAIL must be a valid email")
+		return BootstrapResult{}, errors.New("BOOTSTRAP_MANAGER_EMAIL must be a valid email")
 	}
 	username := NormalizeUsername(cfg.Username)
 	if username == "" {
-		return errors.New("BOOTSTRAP_MANAGER_USERNAME is required when BOOTSTRAP_MANAGER_ENABLED is true")
+		return BootstrapResult{}, errors.New("BOOTSTRAP_MANAGER_USERNAME is required when BOOTSTRAP_MANAGER_ENABLED is true")
 	}
 	if len(cfg.Password) < 12 {
-		return errors.New("BOOTSTRAP_MANAGER_PASSWORD must be at least 12 characters")
+		return BootstrapResult{}, errors.New("BOOTSTRAP_MANAGER_PASSWORD must be at least 12 characters")
 	}
 
 	hash, err := hasher.Hash(cfg.Password)
 	if err != nil {
-		return err
+		return BootstrapResult{}, err
 	}
 
-	_, err = repo.CreateUser(ctx, CreateUserParams{
+	user, err := repo.CreateUser(ctx, CreateUserParams{
 		Email:        email,
 		Username:     username,
 		PasswordHash: hash,
 		GlobalRole:   GlobalRoleManager,
 	})
-	return err
+	if err != nil {
+		return BootstrapResult{}, err
+	}
+
+	return BootstrapResult{
+		Status:   BootstrapManagerSeeded,
+		UserID:   user.ID,
+		Email:    user.Email,
+		Username: user.Username,
+	}, nil
 }

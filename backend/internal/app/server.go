@@ -10,6 +10,7 @@ import (
 	"vue-api/backend/internal/auth"
 	"vue-api/backend/internal/config"
 	apihttp "vue-api/backend/internal/http"
+	gormstorage "vue-api/backend/internal/storage/gorm"
 )
 
 type Server struct {
@@ -43,7 +44,16 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 		AllowCredentials: true,
 	}))
 
-	users := auth.NewMemoryUserRepository()
+	db, err := gormstorage.Open(cfg.Database)
+	if err != nil {
+		return nil, err
+	}
+	if err := gormstorage.VerifySchema(db); err != nil {
+		return nil, err
+	}
+	logger.Info("database ready", "driver", cfg.Database.Driver)
+
+	users := gormstorage.NewUserRepository(db)
 	passwords := auth.DefaultPasswordHasher()
 	tokens := auth.NewTokenManager(auth.TokenConfig{
 		AccessSecret:  cfg.Auth.JWTAccessSecret,
@@ -52,14 +62,17 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 		RefreshTTL:    cfg.Auth.JWTRefreshTTL,
 		Issuer:        cfg.App.Name,
 	})
-	if err := auth.BootstrapManager(ctx, users, passwords, auth.BootstrapConfig{
+
+	bootstrapResult, err := auth.BootstrapManager(ctx, users, passwords, auth.BootstrapConfig{
 		Enabled:  cfg.Auth.BootstrapManagerEnabled,
 		Email:    cfg.Auth.BootstrapManagerEmail,
 		Username: cfg.Auth.BootstrapManagerUsername,
 		Password: cfg.Auth.BootstrapManagerPassword,
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
+	logBootstrapResult(logger, bootstrapResult)
 
 	eventDeps := apihttp.NewEventDeps(users, tokens)
 
@@ -79,6 +92,23 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 		addr:   cfg.HTTP.Addr,
 		router: router,
 	}, nil
+}
+
+func logBootstrapResult(logger *slog.Logger, result auth.BootstrapResult) {
+	switch result.Status {
+	case auth.BootstrapManagerSeeded:
+		logger.Info("bootstrap manager seeded",
+			"userId", result.UserID,
+			"email", result.Email,
+			"username", result.Username,
+		)
+	case auth.BootstrapManagerSkippedExistingUsers:
+		logger.Info("bootstrap manager skipped", "reason", "users already exist")
+	case auth.BootstrapManagerDisabled:
+		logger.Info("bootstrap manager disabled")
+	default:
+		logger.Info("bootstrap manager status unknown", "status", result.Status)
+	}
 }
 
 func (s *Server) Start() error {

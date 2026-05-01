@@ -29,6 +29,24 @@ tasks:
     cmds:
       - GOCACHE={{.GOCACHE}} GOMODCACHE={{.GOMODCACHE}} go build -o .tmp/api ./cmd/api/main.go
 
+  db:generate:
+    desc: Generate a backend database migration from current Go schema
+    dir: '{{.TASKFILE_DIR}}/backend'
+    cmds:
+      - GOCACHE={{.GOCACHE}} GOMODCACHE={{.GOMODCACHE}} go run ./cmd/db generate
+
+  db:plan:
+    desc: Show generated backend database migrations pending apply
+    dir: '{{.TASKFILE_DIR}}/backend'
+    cmds:
+      - GOCACHE={{.GOCACHE}} GOMODCACHE={{.GOMODCACHE}} go run ./cmd/db plan
+
+  db:migrate:
+    desc: Apply generated backend database migrations
+    dir: '{{.TASKFILE_DIR}}/backend'
+    cmds:
+      - GOCACHE={{.GOCACHE}} GOMODCACHE={{.GOMODCACHE}} go run ./cmd/db migrate
+
   # Frontend Tasks
   frontend:dev:
     desc: Run frontend with Bun (hot-reload)

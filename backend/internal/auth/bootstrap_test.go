@@ -13,13 +13,17 @@ func TestBootstrapManagerCreatesFirstUserWhenEnabled(t *testing.T) {
 	repo := auth.NewMemoryUserRepository()
 	hasher := testPasswordHasher()
 
-	err := auth.BootstrapManager(context.Background(), repo, hasher, auth.BootstrapConfig{
+	result, err := auth.BootstrapManager(context.Background(), repo, hasher, auth.BootstrapConfig{
 		Enabled:  true,
 		Email:    " Manager@Example.COM ",
 		Username: "Manager",
 		Password: "strong-password",
 	})
 	require.NoError(t, err)
+	require.Equal(t, auth.BootstrapManagerSeeded, result.Status)
+	require.Equal(t, "manager@example.com", result.Email)
+	require.Equal(t, "manager", result.Username)
+	require.NotEmpty(t, result.UserID)
 
 	count, err := repo.CountUsers(context.Background())
 	require.NoError(t, err)
@@ -35,13 +39,14 @@ func TestBootstrapManagerCreatesFirstUserWhenEnabled(t *testing.T) {
 func TestBootstrapManagerDoesNothingWhenDisabled(t *testing.T) {
 	repo := auth.NewMemoryUserRepository()
 
-	err := auth.BootstrapManager(context.Background(), repo, testPasswordHasher(), auth.BootstrapConfig{
+	result, err := auth.BootstrapManager(context.Background(), repo, testPasswordHasher(), auth.BootstrapConfig{
 		Enabled:  false,
 		Email:    "manager@example.com",
 		Username: "manager",
 		Password: "strong-password",
 	})
 	require.NoError(t, err)
+	require.Equal(t, auth.BootstrapManagerDisabled, result.Status)
 
 	count, err := repo.CountUsers(context.Background())
 	require.NoError(t, err)
@@ -61,13 +66,14 @@ func TestBootstrapManagerDoesNotReseedExistingUsers(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = auth.BootstrapManager(context.Background(), repo, hasher, auth.BootstrapConfig{
+	result, err := auth.BootstrapManager(context.Background(), repo, hasher, auth.BootstrapConfig{
 		Enabled:  true,
 		Email:    "manager@example.com",
 		Username: "manager",
 		Password: "strong-password",
 	})
 	require.NoError(t, err)
+	require.Equal(t, auth.BootstrapManagerSkippedExistingUsers, result.Status)
 
 	count, err := repo.CountUsers(context.Background())
 	require.NoError(t, err)
@@ -80,7 +86,7 @@ func TestBootstrapManagerDoesNotReseedExistingUsers(t *testing.T) {
 func TestBootstrapManagerRequiresValidCredentialsWhenEnabled(t *testing.T) {
 	repo := auth.NewMemoryUserRepository()
 
-	err := auth.BootstrapManager(context.Background(), repo, testPasswordHasher(), auth.BootstrapConfig{
+	_, err := auth.BootstrapManager(context.Background(), repo, testPasswordHasher(), auth.BootstrapConfig{
 		Enabled:  true,
 		Email:    "",
 		Username: "manager",
@@ -88,7 +94,7 @@ func TestBootstrapManagerRequiresValidCredentialsWhenEnabled(t *testing.T) {
 	})
 	require.ErrorContains(t, err, "BOOTSTRAP_MANAGER_EMAIL")
 
-	err = auth.BootstrapManager(context.Background(), repo, testPasswordHasher(), auth.BootstrapConfig{
+	_, err = auth.BootstrapManager(context.Background(), repo, testPasswordHasher(), auth.BootstrapConfig{
 		Enabled:  true,
 		Email:    "manager@example.com",
 		Username: "manager",
@@ -96,7 +102,7 @@ func TestBootstrapManagerRequiresValidCredentialsWhenEnabled(t *testing.T) {
 	})
 	require.ErrorContains(t, err, "BOOTSTRAP_MANAGER_PASSWORD")
 
-	err = auth.BootstrapManager(context.Background(), repo, testPasswordHasher(), auth.BootstrapConfig{
+	_, err = auth.BootstrapManager(context.Background(), repo, testPasswordHasher(), auth.BootstrapConfig{
 		Enabled:  true,
 		Email:    "manager@example.com",
 		Username: "",
