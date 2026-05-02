@@ -1,5 +1,8 @@
 <template>
-  <NuxtLayout>
-    <NuxtPage />
-  </NuxtLayout>
+  <UiTooltipProvider>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+    <UiToaster position="top-right" />
+  </UiTooltipProvider>
 </template>

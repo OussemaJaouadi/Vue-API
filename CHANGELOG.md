@@ -36,6 +36,12 @@
 
 ## New
 
+- Added shadcn-vue UI components from the configured preset.
+- Added app logo asset usage and favicon wiring.
+- Refactored the auth pages, app shell, and first dashboard state around the generated UI primitives.
+
+## Old
+
 - Added auth session state with memory-only access token storage.
 - Added refresh-cookie lifecycle through backend auth routes.
 - Added API client bearer injection and one-time refresh retry on `401`.

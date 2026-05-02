@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhSignIn as SignIn } from '@phosphor-icons/vue'
+
 const auth = useAuthSession()
 
 const login = ref('')
@@ -30,49 +32,75 @@ const submit = async () => {
 </script>
 
 <template>
-  <main class="grid min-h-screen place-items-center bg-background px-4">
-    <form class="w-full max-w-sm space-y-5 rounded-lg border bg-card p-6 shadow-sm" @submit.prevent="submit">
-      <div class="space-y-1">
-        <h1 class="font-heading text-2xl font-bold">Sign in</h1>
-        <p class="text-sm text-muted-foreground">Use your email or username to continue.</p>
+  <main class="grid min-h-dvh bg-background lg:grid-cols-[1fr_420px]">
+    <section class="hidden border-r bg-muted/30 p-8 lg:flex lg:flex-col lg:justify-between">
+      <div class="space-y-2">
+        <AppLogo mode="lockup" class="h-12 w-auto" />
+        <div class="text-xs text-muted-foreground">Collections, environments, execution.</div>
       </div>
 
-      <label class="block space-y-2 text-sm font-medium">
-        <span>Email or username</span>
-        <input
-          v-model="login"
-          class="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
-          required
-          type="text"
-        >
-      </label>
+      <div class="max-w-xl space-y-4">
+        <AppLogo class="h-28 w-28 opacity-90" />
+        <UiBadge variant="secondary">Auth gateway</UiBadge>
+        <h1 class="font-heading text-4xl font-semibold leading-tight">
+          Sign in to continue working with protected APIs.
+        </h1>
+        <p class="text-sm text-muted-foreground">
+          Access tokens stay in memory. Refresh is handled through the backend cookie lifecycle.
+        </p>
+      </div>
+    </section>
 
-      <label class="block space-y-2 text-sm font-medium">
-        <span>Password</span>
-        <input
-          v-model="password"
-          class="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
-          required
-          type="password"
-        >
-      </label>
+    <section class="grid place-items-center px-4 py-10">
+      <form class="w-full max-w-sm" @submit.prevent="submit">
+        <UiCard>
+          <UiCardHeader>
+            <UiCardTitle>Sign in</UiCardTitle>
+            <UiCardDescription>Use your email or username to continue.</UiCardDescription>
+          </UiCardHeader>
+          <UiCardContent class="space-y-4">
+            <div class="space-y-2">
+              <UiLabel for="login">Email or username</UiLabel>
+              <UiInput
+                id="login"
+                v-model="login"
+                autocomplete="username"
+                required
+                type="text"
+              />
+            </div>
 
-      <p v-if="error" class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-        {{ error }}
-      </p>
+            <div class="space-y-2">
+              <UiLabel for="password">Password</UiLabel>
+              <UiInput
+                id="password"
+                v-model="password"
+                autocomplete="current-password"
+                required
+                type="password"
+              />
+            </div>
 
-      <button
-        class="h-10 w-full rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
-        :disabled="submitting"
-        type="submit"
-      >
-        {{ submitting ? 'Signing in...' : 'Sign in' }}
-      </button>
-
-      <p class="text-center text-sm text-muted-foreground">
-        No account?
-        <NuxtLink class="font-medium text-primary hover:underline" to="/register">Create one</NuxtLink>
-      </p>
-    </form>
+            <UiAlert v-if="error" variant="destructive">
+              <UiAlertDescription>{{ error }}</UiAlertDescription>
+            </UiAlert>
+          </UiCardContent>
+          <UiCardFooter class="flex-col gap-3">
+            <UiButton
+              class="w-full"
+              :disabled="submitting"
+              type="submit"
+            >
+              <SignIn class="size-4" />
+              {{ submitting ? 'Signing in...' : 'Sign in' }}
+            </UiButton>
+            <p class="text-center text-xs text-muted-foreground">
+              No account?
+              <NuxtLink class="font-medium text-primary hover:underline" to="/register">Create one</NuxtLink>
+            </p>
+          </UiCardFooter>
+        </UiCard>
+      </form>
+    </section>
   </main>
 </template>

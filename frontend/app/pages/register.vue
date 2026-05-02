@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhUserPlus as UserPlus } from '@phosphor-icons/vue'
+
 const auth = useAuthSession()
 
 const email = ref('')
@@ -32,60 +34,83 @@ const submit = async () => {
 </script>
 
 <template>
-  <main class="grid min-h-screen place-items-center bg-background px-4">
-    <form class="w-full max-w-sm space-y-5 rounded-lg border bg-card p-6 shadow-sm" @submit.prevent="submit">
-      <div class="space-y-1">
-        <h1 class="font-heading text-2xl font-bold">Create account</h1>
-        <p class="text-sm text-muted-foreground">Register first, then a manager grants workspace access.</p>
+  <main class="grid min-h-dvh bg-background lg:grid-cols-[1fr_440px]">
+    <section class="hidden border-r bg-muted/30 p-8 lg:flex lg:flex-col lg:justify-between">
+      <div class="space-y-2">
+        <AppLogo mode="lockup" class="h-12 w-auto" />
+        <div class="text-xs text-muted-foreground">Protected workspace access.</div>
       </div>
 
-      <label class="block space-y-2 text-sm font-medium">
-        <span>Email</span>
-        <input
-          v-model="email"
-          class="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
-          required
-          type="email"
-        >
-      </label>
+      <div class="max-w-xl space-y-4">
+        <AppLogo class="h-28 w-28 opacity-90" />
+        <UiBadge variant="secondary">Registration queue</UiBadge>
+        <h1 class="font-heading text-4xl font-semibold leading-tight">
+          Create your account, then wait for workspace assignment.
+        </h1>
+        <p class="text-sm text-muted-foreground">
+          Managers receive the registration event in real time and grant access per workspace.
+        </p>
+      </div>
+    </section>
 
-      <label class="block space-y-2 text-sm font-medium">
-        <span>Username</span>
-        <input
-          v-model="username"
-          class="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
-          required
-          type="text"
-        >
-      </label>
+    <section class="grid place-items-center px-4 py-10">
+      <form class="w-full max-w-sm" @submit.prevent="submit">
+        <UiCard>
+          <UiCardHeader>
+            <UiCardTitle>Create account</UiCardTitle>
+            <UiCardDescription>Register first, then a manager grants workspace access.</UiCardDescription>
+          </UiCardHeader>
+          <UiCardContent class="space-y-4">
+            <div class="space-y-2">
+              <UiLabel for="email">Email</UiLabel>
+              <UiInput
+                id="email"
+                v-model="email"
+                autocomplete="email"
+                required
+                type="email"
+              />
+            </div>
 
-      <label class="block space-y-2 text-sm font-medium">
-        <span>Password</span>
-        <input
-          v-model="password"
-          class="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
-          minlength="12"
-          required
-          type="password"
-        >
-      </label>
+            <div class="space-y-2">
+              <UiLabel for="username">Username</UiLabel>
+              <UiInput
+                id="username"
+                v-model="username"
+                autocomplete="username"
+                required
+                type="text"
+              />
+            </div>
 
-      <p v-if="error" class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-        {{ error }}
-      </p>
+            <div class="space-y-2">
+              <UiLabel for="password">Password</UiLabel>
+              <UiInput
+                id="password"
+                v-model="password"
+                autocomplete="new-password"
+                minlength="12"
+                required
+                type="password"
+              />
+            </div>
 
-      <button
-        class="h-10 w-full rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
-        :disabled="submitting"
-        type="submit"
-      >
-        {{ submitting ? 'Creating...' : 'Create account' }}
-      </button>
-
-      <p class="text-center text-sm text-muted-foreground">
-        Already registered?
-        <NuxtLink class="font-medium text-primary hover:underline" to="/login">Sign in</NuxtLink>
-      </p>
-    </form>
+            <UiAlert v-if="error" variant="destructive">
+              <UiAlertDescription>{{ error }}</UiAlertDescription>
+            </UiAlert>
+          </UiCardContent>
+          <UiCardFooter class="flex-col gap-3">
+            <UiButton class="w-full" :disabled="submitting" type="submit">
+              <UserPlus class="size-4" />
+              {{ submitting ? 'Creating...' : 'Create account' }}
+            </UiButton>
+            <p class="text-center text-xs text-muted-foreground">
+              Already registered?
+              <NuxtLink class="font-medium text-primary hover:underline" to="/login">Sign in</NuxtLink>
+            </p>
+          </UiCardFooter>
+        </UiCard>
+      </form>
+    </section>
   </main>
 </template>

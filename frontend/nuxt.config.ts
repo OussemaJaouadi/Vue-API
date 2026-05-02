@@ -3,6 +3,14 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineNuxtConfig({
   css: ['~/assets/css/tailwind.css'],
   compatibilityDate: '2025-01-01',
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', type: 'image/png', href: '/favicon.png' },
+        { rel: 'apple-touch-icon', href: '/favicon.png' },
+      ],
+    },
+  },
   // Nuxt runtime config is overridden by matching runtime env vars:
   // apiBaseUrl -> NUXT_API_BASE_URL, public.appName -> NUXT_PUBLIC_APP_NAME.
   // Keep defaults literal so Docker/prod can change env without rebuilding.
