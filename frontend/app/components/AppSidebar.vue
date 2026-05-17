@@ -8,7 +8,13 @@ import {
   PhX,
   PhUserCircle,
   PhActivity,
+  PhDesktop,
+  PhMoon,
+  PhSun,
+  PhCheck,
 } from '@phosphor-icons/vue'
+import type { Component } from 'vue'
+import type { ThemePreference } from '~/composables/useThemePreference'
 
 const props = defineProps<{
   appName: string
@@ -27,6 +33,8 @@ defineEmits<{
   logout: []
 }>()
 
+const theme = useThemePreference()
+
 const healthLabel = computed(() => {
   if (props.healthStatus === 'ok') return 'Online'
   if (props.healthStatus === 'error') return 'Offline'
@@ -38,6 +46,18 @@ const navItems = [
   { label: 'Collections', icon: PhFolderOpen, active: false },
   { label: 'Environments', icon: PhDatabase, active: false },
 ]
+
+const themeItems: Array<{
+  value: ThemePreference
+  label: string
+  icon: Component
+}> = [
+  { value: 'light', label: 'Light', icon: PhSun },
+  { value: 'system', label: 'System', icon: PhDesktop },
+  { value: 'dark', label: 'Dark', icon: PhMoon },
+]
+
+const activeThemeItem = computed(() => themeItems.find(item => item.value === theme.preference.value) ?? themeItems[1])
 </script>
 
 <template>
@@ -120,6 +140,47 @@ const navItems = [
 
     <!-- Modular Footer -->
     <div class="mt-auto flex flex-col border-t-2 border-primary/10 bg-primary/2 p-2 gap-2">
+      <!-- Module 0: Theme Preference -->
+      <UiDropdownMenu>
+        <UiDropdownMenuTrigger as-child>
+          <button
+            class="flex h-9 w-full items-center rounded-none border border-primary/10 bg-background/50 px-3 text-muted-foreground shadow-inner transition-colors hover:border-primary/30 hover:text-foreground"
+            :class="collapsed ? 'justify-center px-0' : 'justify-start'"
+            type="button"
+            :title="`Theme: ${activeThemeItem.label}`"
+          >
+            <component :is="activeThemeItem.icon" class="size-4 shrink-0 text-primary" :class="!collapsed && 'mr-3'" />
+            <span v-if="!collapsed" class="truncate font-mono text-[9px] font-black uppercase tracking-[0.2em]">
+              Theme
+            </span>
+            <span v-if="!collapsed" class="ml-auto font-mono text-[8px] font-black uppercase tracking-widest text-muted-foreground/55">
+              {{ activeThemeItem.label }}
+            </span>
+          </button>
+        </UiDropdownMenuTrigger>
+
+        <UiDropdownMenuContent
+          align="start"
+          side="right"
+          class="w-44 rounded-none border-2 p-1"
+        >
+          <UiDropdownMenuItem
+            v-for="item in themeItems"
+            :key="item.value"
+            class="grid grid-cols-[18px_minmax(0,1fr)_14px] gap-2 rounded-none px-2 py-2"
+            :class="theme.preference.value === item.value ? 'bg-primary/8 text-foreground' : 'text-muted-foreground'"
+            @click="theme.setTheme(item.value)"
+          >
+            <component
+              :is="item.icon"
+              class="size-3.5 self-center"
+              :class="theme.preference.value === item.value ? 'text-primary' : 'text-muted-foreground'"
+            />
+            <span class="font-mono text-[10px] font-black uppercase tracking-widest">{{ item.label }}</span>
+            <PhCheck v-if="theme.preference.value === item.value" class="size-3 self-center text-primary" />
+          </UiDropdownMenuItem>
+        </UiDropdownMenuContent>
+      </UiDropdownMenu>
       
       <!-- Module 1: System Status -->
       <UiTooltip>

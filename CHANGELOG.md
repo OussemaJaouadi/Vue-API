@@ -43,6 +43,8 @@
 - Added mock execution responses per endpoint.
 - Added WebSocket display scaffold with `WS` requests, connect/disconnect state, message composer, mock send/receive events, and timeline display.
 - Added backend-owned WebSocket execution notes to the phase docs.
+- Added sidebar theme preference control for light, system, and dark modes.
+- Improved dark-mode surface, border, input, and primary color contrast.
 
 ## Old
 

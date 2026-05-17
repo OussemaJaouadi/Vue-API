@@ -1,3 +1,7 @@
+<script setup lang="ts">
+useThemePreference()
+</script>
+
 <template>
   <UiTooltipProvider>
     <NuxtLayout>
