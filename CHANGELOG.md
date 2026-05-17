@@ -36,12 +36,19 @@
 
 ## New
 
-- Added shadcn-vue UI components from the configured preset.
-- Added app logo asset usage and favicon wiring.
-- Refactored the auth pages, app shell, and first dashboard state around the generated UI primitives.
+- Added workbench shell with collapsible app navigation, project topbar, request tabs, split-pane editor/response layout, and persisted pane sizing.
+- Added mock collection/request data consumed through `useWorkbench`.
+- Added request controls for method selection, URL editing, params, headers, request body, and request auth configuration.
+- Added CodeMirror-backed request/response surfaces with language selection, formatting, minify, copy, bracket closing, fold gutters, and tab handling.
+- Added mock execution responses per endpoint.
+- Added WebSocket display scaffold with `WS` requests, connect/disconnect state, message composer, mock send/receive events, and timeline display.
+- Added backend-owned WebSocket execution notes to the phase docs.
 
 ## Old
 
+- Added shadcn-vue UI components from the configured preset.
+- Added app logo asset usage and favicon wiring.
+- Refactored the auth pages, app shell, and first dashboard state around the generated UI primitives.
 - Added auth session state with memory-only access token storage.
 - Added refresh-cookie lifecycle through backend auth routes.
 - Added API client bearer injection and one-time refresh retry on `401`.

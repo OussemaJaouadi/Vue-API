@@ -23,6 +23,21 @@ export default defineNuxtConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    optimizeDeps: {
+      include: [
+        '@codemirror/autocomplete',
+        '@codemirror/commands',
+        '@codemirror/lang-html',
+        '@codemirror/lang-json',
+        '@codemirror/lang-xml',
+        '@codemirror/lang-yaml',
+        '@codemirror/language',
+        '@codemirror/state',
+        '@codemirror/view',
+        '@lezer/highlight',
+        'class-variance-authority',
+      ],
+    },
   },
   modules: ['shadcn-nuxt'],
   shadcn: {

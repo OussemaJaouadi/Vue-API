@@ -83,7 +83,11 @@
     --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
     --sidebar-border: oklch(0.92 0.004 286.32);
     --sidebar-ring: oklch(0.705 0.015 286.067);
-}
+    --surface-1: oklch(1 0 0);
+    --surface-2: oklch(0.96 0.002 286);
+    --surface-3: oklch(0.25 0.008 286);
+    --overlay-brand: oklch(0.508 0.118 165.612);
+  }
 
 .dark {
     --background: oklch(0.141 0.005 285.823);
@@ -117,14 +121,163 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.552 0.016 285.938);
-}
+    --surface-1: oklch(0.21 0.006 285.885);
+    --surface-2: oklch(0.18 0.006 285);
+    --surface-3: oklch(0.9 0.01 286);
+    --overlay-brand: oklch(0.432 0.095 166.913);
+ }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
+ @layer base {
+   * {
+     @apply border-border outline-ring/50;
+     }
+   body {
+     @apply bg-background text-foreground;
+     @apply font-sans;
+     }
+ }
+
+ @layer utilities {
+  .border-subtle {
+    border-image: linear-gradient(to bottom right,
+        oklch(0.92 0.004 286.32) 0%,
+        oklch(0.85 0.004 286.32) 100%) 1;
+  }
+
+  .auth-ambient-a {
+    animation: auth-float-a 14s ease-in-out infinite;
+  }
+
+  .auth-ambient-b {
+    animation: auth-float-b 17s ease-in-out infinite;
+  }
+
+  .auth-form-in {
+    animation: auth-form-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .auth-preview-in {
+    animation: auth-preview-in 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .auth-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .auth-shimmer::after {
+    animation: auth-shimmer 2.6s ease-in-out infinite;
+    background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.38), transparent);
+    content: "";
+    inset: 0;
+    position: absolute;
+    transform: translateX(-120%);
+  }
+
+  .dark .auth-shimmer::after {
+    background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.12), transparent);
+  }
+
+  .auth-progress-line {
+    background-image: linear-gradient(90deg, oklch(0.508 0.118 165.612 / 0.18), oklch(0.508 0.118 165.612 / 0.42), oklch(0.508 0.118 165.612 / 0.18));
+    background-size: 220% 100%;
+    animation: auth-progress-line 2.8s ease-in-out infinite;
+  }
+
+  .auth-status-dot {
+    animation: auth-status-dot 1.8s ease-in-out infinite;
+  }
+
+  .auth-preview-card {
+    animation: auth-preview-card 4.5s ease-in-out infinite;
+  }
+
+  .auth-preview-card-delayed {
+    animation: auth-preview-card 4.5s ease-in-out 900ms infinite;
+  }
+
+  .auth-grid {
+    background-image:
+      linear-gradient(to right, oklch(0.552 0.016 285.938 / 0.08) 1px, transparent 1px),
+      linear-gradient(to bottom, oklch(0.552 0.016 285.938 / 0.08) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+
+  @keyframes auth-float-a {
+    0%, 100% {
+      transform: translate3d(0, 0, 0) scale(1);
     }
-  body {
-    @apply bg-background text-foreground;
-    @apply font-sans;
+    50% {
+      transform: translate3d(18px, 22px, 0) scale(1.08);
     }
+  }
+
+  @keyframes auth-float-b {
+    0%, 100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(-22px, -16px, 0) scale(1.05);
+    }
+  }
+
+  @keyframes auth-form-in {
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes auth-preview-in {
+    from {
+      opacity: 0;
+      transform: translateY(18px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes auth-shimmer {
+    0% {
+      transform: translateX(-120%);
+    }
+    55%, 100% {
+      transform: translateX(120%);
+    }
+  }
+
+  @keyframes auth-progress-line {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  @keyframes auth-status-dot {
+    0%, 100% {
+      box-shadow: 0 0 0 0 oklch(0.696 0.17 162.48 / 0.42);
+      opacity: 0.85;
+    }
+    50% {
+      box-shadow: 0 0 0 7px oklch(0.696 0.17 162.48 / 0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes auth-preview-card {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
 }
