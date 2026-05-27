@@ -117,36 +117,33 @@ export function useWorkbench() {
   const rootRequests = useState<RequestItem[]>('workbench:root-requests', () => [])
   const collectionsLoading = useState<boolean>('workbench:collections-loading', () => true)
 
+  const workspaceId = useState<string>('workspace:id', () => '')
+
   onMounted(() => {
     if (treeItems.value.length === 0) {
-      const { currentWorkspaceId } = useWorkspace()
-      if (currentWorkspaceId.value) {
+      if (workspaceId.value) {
         loadCollections()
       }
     } else {
       collectionsLoading.value = false
     }
   })
-
-  watch(() => {
-    const { currentWorkspaceId } = useWorkspace()
-    return currentWorkspaceId.value
-  }, (id) => {
+  watch(workspaceId, (id) => {
     if (id && treeItems.value.length === 0) {
       loadCollections()
     }
   })
 
   const loadCollections = async () => {
+    const wid = workspaceId.value
+    if (!wid) {
+      collectionsLoading.value = false
+      return
+    }
     collectionsLoading.value = true
     try {
       const { get } = useApiClient()
-      const { currentWorkspaceId } = useWorkspace()
-      if (!currentWorkspaceId.value) {
-        collectionsLoading.value = false
-        return
-      }
-      const data = await get<any>(`/v1/collections?workspaceId=${currentWorkspaceId.value}`)
+      const data = await get<any>(`/v1/collections?workspaceId=${wid}`)
       treeItems.value = data.collections.map((c: any) => ({
         id: c.id,
         name: c.name,
@@ -260,12 +257,12 @@ export function useWorkbench() {
   const isWebSocketRequest = computed(() => activeRequest.value.method === 'SOCKET')
 
   const addFolder = async (name: string = 'New Collection') => {
+    const wid = workspaceId.value
+    if (!wid) return
     try {
       const { post } = useApiClient()
-      const { currentWorkspaceId } = useWorkspace()
-      if (!currentWorkspaceId.value) return
       const created = await post<any>('/v1/collections', {
-        workspaceId: currentWorkspaceId.value,
+        workspaceId: wid,
         name,
         icon: 'PhGlobe',
       })
@@ -290,10 +287,9 @@ export function useWorkbench() {
     try {
       const { post } = useApiClient()
       const folderId = folderName ? treeItems.value.find(f => f.name === folderName)?.id : undefined
-      const { currentWorkspaceId } = useWorkspace()
-      if (!currentWorkspaceId.value) return
+      if (!workspaceId.value) return
       const created = await post<any>('/v1/collections/requests', {
-        workspaceId: currentWorkspaceId.value,
+        workspaceId: workspaceId.value,
         collectionId: folderId || null,
         method: 'GET',
         name: 'New Request',

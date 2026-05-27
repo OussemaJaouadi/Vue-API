@@ -6,11 +6,11 @@ export function useEnvironments() {
   const envsLoading = useState<boolean>('environments:loading', () => true)
 
   const loadEnvironments = async () => {
-    const { currentWorkspaceId } = useWorkspace()
-    if (!currentWorkspaceId.value) return
+    const wid = workspaceId.value
+    if (!wid) return
     envsLoading.value = true
     try {
-      const data = await get<any[]>(`/v1/environments?workspaceId=${currentWorkspaceId.value}`)
+      const data = await get<any[]>(`/v1/environments?workspaceId=${wid}`)
       environments.value = data
       if (data.length > 0 && !activeEnvironmentName.value) {
         activeEnvironmentName.value = data[0].name
@@ -22,10 +22,8 @@ export function useEnvironments() {
     }
   }
 
-  watch(() => {
-    const { currentWorkspaceId } = useWorkspace()
-    return currentWorkspaceId.value
-  }, (id) => {
+  const workspaceId = useState<string>('workspace:id', () => '')
+  watch(workspaceId, (id) => {
     if (id) loadEnvironments()
   }, { immediate: true })
 
@@ -40,11 +38,11 @@ export function useEnvironments() {
   })
 
   const handleCreate = async (env: any) => {
+    const wid = workspaceId.value
+    if (!wid) return
     try {
-      const { currentWorkspaceId } = useWorkspace()
-      if (!currentWorkspaceId.value) return
       const created = await post<any>('/v1/environments', {
-        workspaceId: currentWorkspaceId.value,
+        workspaceId: wid,
         name: env.name,
         visibility: env.visibility,
       })

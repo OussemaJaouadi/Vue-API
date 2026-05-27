@@ -19,22 +19,24 @@ export function useAccess() {
 
   const selectedUser = computed(() => users.value.find(user => user.id === selectedUserId.value) ?? users.value[0])
 
+  const workspaceId = useState<string>('workspace:id', () => '')
+
   const loadGrantsForUser = async (userId: string) => {
-    const { currentWorkspaceId } = useWorkspace()
-    if (!currentWorkspaceId.value) return { collections: {}, environments: {}, secrets: {} }
+    const wid = workspaceId.value
+    if (!wid) return { collections: {}, environments: {}, secrets: {} }
     try {
-      return await get<any>(`/v1/workspaces/${currentWorkspaceId.value}/members/${userId}/grants`)
+      return await get<any>(`/v1/workspaces/${wid}/members/${userId}/grants`)
     } catch {
       return { collections: {}, environments: {}, secrets: {} }
     }
   }
 
   const loadUsers = async () => {
-    const { currentWorkspaceId } = useWorkspace()
-    if (!currentWorkspaceId.value) return
+    const wid = workspaceId.value
+    if (!wid) return
     usersLoading.value = true
     try {
-      const data = await get<any[]>(`/v1/workspaces/${currentWorkspaceId.value}/members`)
+      const data = await get<any[]>(`/v1/workspaces/${wid}/members`)
       users.value = await Promise.all(data.map(async (m: any) => {
         const grants = await loadGrantsForUser(m.userId)
         return {
@@ -57,10 +59,7 @@ export function useAccess() {
     }
   }
 
-  watch(() => {
-    const { currentWorkspaceId } = useWorkspace()
-    return currentWorkspaceId.value
-  }, (id) => {
+  watch(workspaceId, (id) => {
     if (id) loadUsers()
   }, { immediate: true })
 
