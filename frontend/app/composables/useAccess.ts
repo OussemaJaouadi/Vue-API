@@ -19,32 +19,50 @@ export function useAccess() {
 
   const selectedUser = computed(() => users.value.find(user => user.id === selectedUserId.value) ?? users.value[0])
 
+  const loadGrantsForUser = async (userId: string) => {
+    const { currentWorkspaceId } = useWorkspace()
+    if (!currentWorkspaceId.value) return { collections: {}, environments: {}, secrets: {} }
+    try {
+      return await get<any>(`/v1/workspaces/${currentWorkspaceId.value}/members/${userId}/grants`)
+    } catch {
+      return { collections: {}, environments: {}, secrets: {} }
+    }
+  }
+
   const loadUsers = async () => {
+    const { currentWorkspaceId } = useWorkspace()
+    if (!currentWorkspaceId.value) return
     usersLoading.value = true
     try {
-      const data = await get<any[]>('/v1/users')
-      users.value = data.map((u: any) => ({
-        id: u.id,
-        username: u.username,
-        email: u.email,
-        role: u.role,
-        status: u.active ? 'active' : 'inactive',
-        inheritedFrom: '',
-        grants: { collections: {}, environments: {}, secrets: {} },
+      const data = await get<any[]>(`/v1/workspaces/${currentWorkspaceId.value}/members`)
+      users.value = await Promise.all(data.map(async (m: any) => {
+        const grants = await loadGrantsForUser(m.userId)
+        return {
+          id: m.userId,
+          username: m.username,
+          email: m.email,
+          role: m.role,
+          status: 'active',
+          inheritedFrom: '',
+          grants,
+        }
       }))
       if (data.length > 0 && !selectedUserId.value) {
-        selectedUserId.value = data[0].id
+        selectedUserId.value = data[0].userId
       }
     } catch (err) {
-      console.error('Failed to load users', err)
+      console.error('Failed to load workspace members', err)
     } finally {
       usersLoading.value = false
     }
   }
 
-  if (usersLoading.value) {
-    loadUsers()
-  }
+  watch(() => {
+    const { currentWorkspaceId } = useWorkspace()
+    return currentWorkspaceId.value
+  }, (id) => {
+    if (id) loadUsers()
+  }, { immediate: true })
 
   const collectionEntries = computed(() =>
     workbench.treeItems.value.map(group => ({

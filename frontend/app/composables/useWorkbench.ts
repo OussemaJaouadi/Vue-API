@@ -119,9 +119,21 @@ export function useWorkbench() {
 
   onMounted(() => {
     if (treeItems.value.length === 0) {
-      loadCollections()
+      const { currentWorkspaceId } = useWorkspace()
+      if (currentWorkspaceId.value) {
+        loadCollections()
+      }
     } else {
       collectionsLoading.value = false
+    }
+  })
+
+  watch(() => {
+    const { currentWorkspaceId } = useWorkspace()
+    return currentWorkspaceId.value
+  }, (id) => {
+    if (id && treeItems.value.length === 0) {
+      loadCollections()
     }
   })
 
@@ -129,7 +141,12 @@ export function useWorkbench() {
     collectionsLoading.value = true
     try {
       const { get } = useApiClient()
-      const data = await get<any>('/v1/collections?workspaceId=default')
+      const { currentWorkspaceId } = useWorkspace()
+      if (!currentWorkspaceId.value) {
+        collectionsLoading.value = false
+        return
+      }
+      const data = await get<any>(`/v1/collections?workspaceId=${currentWorkspaceId.value}`)
       treeItems.value = data.collections.map((c: any) => ({
         id: c.id,
         name: c.name,
@@ -245,8 +262,10 @@ export function useWorkbench() {
   const addFolder = async (name: string = 'New Collection') => {
     try {
       const { post } = useApiClient()
+      const { currentWorkspaceId } = useWorkspace()
+      if (!currentWorkspaceId.value) return
       const created = await post<any>('/v1/collections', {
-        workspaceId: 'default',
+        workspaceId: currentWorkspaceId.value,
         name,
         icon: 'PhGlobe',
       })
@@ -271,8 +290,10 @@ export function useWorkbench() {
     try {
       const { post } = useApiClient()
       const folderId = folderName ? treeItems.value.find(f => f.name === folderName)?.id : undefined
+      const { currentWorkspaceId } = useWorkspace()
+      if (!currentWorkspaceId.value) return
       const created = await post<any>('/v1/collections/requests', {
-        workspaceId: 'default',
+        workspaceId: currentWorkspaceId.value,
         collectionId: folderId || null,
         method: 'GET',
         name: 'New Request',
