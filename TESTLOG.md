@@ -58,6 +58,46 @@ All production code in these packages was deleted and rewritten test-first (stri
 - UpdateRequest: partial update (method only), full update (method+name+path), not-found error
 - DeleteRequest: removes request, not-found error
 
+### collection HTTP routes (`backend/internal/http/`)
+
+**`collection_routes_test.go`** — 15 tests
+- No auth → 401
+- Missing workspaceId → 400
+- Get empty collections → 200, empty arrays
+- Get with folders and requests → 200, correct nesting
+- Create folder missing fields → 400
+- Create folder duplicate → 409
+- Update folder name/icon → 200
+- Update folder not found → 404
+- Delete folder → 204, removes from list
+- Delete folder not found → 404
+- Create request missing fields → 400
+- Create request defaults method to GET → 201
+- Update request method/name/path → 200
+- Update request not found → 404
+- Delete request → 204
+- Delete request not found → 404
+
+### environment HTTP routes (`backend/internal/http/`)
+
+**`environment_routes_test.go`** — 17 tests
+- No auth → 401
+- Missing workspaceId → 400
+- Get empty → 200, empty array
+- Get with data → 200, secret values masked as `••••••••••••••••`
+- Create missing fields → 400
+- Create duplicate name → 409
+- Update name/visibility → 200
+- Update not found → 404
+- Delete → 204
+- Delete not found → 404
+- Create variable missing key → 400
+- Create variable duplicate key → 409
+- Update variable key/value/secret → 200
+- Update variable not found → 404
+- Delete variable → 204
+- Delete variable not found → 404
+
 ### environment GORM repository (`backend/internal/storage/gorm/`)
 
 **`environment_repository_test.go`** — 24 tests
