@@ -5,6 +5,7 @@ interface EnvironmentItem {
 }
 
 defineProps<{
+  loading?: boolean
   environments: EnvironmentItem[]
   activeEnvironmentName: string
 }>()
@@ -18,10 +19,20 @@ defineEmits<{
   <aside class="flex flex-col w-64 border-r bg-card/30 shrink-0 select-none overflow-hidden">
     <div class="flex h-10 items-center justify-between border-b bg-muted/30 px-3 shrink-0">
       <span class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cluster</span>
-      <span class="font-mono text-[9px] font-black uppercase tracking-widest text-primary/40">{{ environments.length }} nodes</span>
+      <span v-if="!loading" class="font-mono text-[9px] font-black uppercase tracking-widest text-primary/40">{{ environments.length }} nodes</span>
+      <div v-else class="h-2 w-12 bg-muted-foreground/15 animate-pulse" />
     </div>
 
     <div class="flex-1 p-1 space-y-0.5 overflow-y-auto custom-scrollbar">
+      <template v-if="loading">
+        <div v-for="i in 3" :key="i" class="flex h-14 w-full items-center gap-3 px-3">
+          <div class="flex-1 space-y-1.5">
+            <div class="h-3 w-24 bg-muted-foreground/15 animate-pulse" />
+            <div class="h-2 w-14 bg-muted-foreground/10 animate-pulse" />
+          </div>
+        </div>
+      </template>
+
       <button
         v-for="environment in environments"
         :key="environment.name"
@@ -46,6 +57,10 @@ defineEmits<{
 
         <div v-if="activeEnvironmentName === environment.name" class="size-1.5 bg-primary/40 animate-pulse" />
       </button>
+
+      <div v-if="!loading && environments.length === 0" class="flex flex-col items-center gap-3 px-4 pt-10 text-center">
+        <span class="font-mono text-[10px] text-muted-foreground/40 italic">No environments yet</span>
+      </div>
     </div>
   </aside>
 </template>

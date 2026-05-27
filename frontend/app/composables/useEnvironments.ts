@@ -3,18 +3,24 @@ export function useEnvironments() {
 
   const environments = useState<any[]>('environments:data', () => [])
   const activeEnvironmentName = useState<string>('environments:active', () => '')
-  const loaded = ref(false)
+  const envsLoading = useState<boolean>('environments:loading', () => true)
 
   const loadEnvironments = async () => {
-    const data = await get<any[]>('/v1/environments?workspaceId=default')
-    environments.value = data
-    if (data.length > 0 && !activeEnvironmentName.value) {
-      activeEnvironmentName.value = data[0].name
+    envsLoading.value = true
+    try {
+      const data = await get<any[]>('/v1/environments?workspaceId=default')
+      environments.value = data
+      if (data.length > 0 && !activeEnvironmentName.value) {
+        activeEnvironmentName.value = data[0].name
+      }
+    } catch (err) {
+      console.error('Failed to load environments', err)
+    } finally {
+      envsLoading.value = false
     }
-    loaded.value = true
   }
 
-  if (!loaded.value) {
+  if (envsLoading.value) {
     loadEnvironments()
   }
 
@@ -106,6 +112,7 @@ export function useEnvironments() {
 
   return {
     environments,
+    envsLoading,
     activeEnvironmentName,
     activeEnvironment,
     secretVariableCount,

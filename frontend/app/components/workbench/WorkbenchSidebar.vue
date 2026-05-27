@@ -155,6 +155,29 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
 
     <!-- Explorer Navigation -->
     <nav class="flex-1 overflow-y-auto p-1 custom-scrollbar">
+      <!-- Loading State -->
+      <template v-if="workbench.collectionsLoading.value">
+        <div class="space-y-2 p-3">
+          <div v-for="i in 4" :key="i" class="flex h-10 items-center gap-3 px-2">
+            <div class="size-8 bg-muted-foreground/10 animate-pulse" />
+            <div class="h-3 w-32 bg-muted-foreground/15 animate-pulse" />
+          </div>
+        </div>
+      </template>
+
+      <!-- Empty State -->
+      <template v-else-if="workbench.rootRequests.value.length === 0 && workbench.treeItems.value.length === 0">
+        <div class="flex flex-col items-center gap-3 px-6 pt-12 text-center">
+          <div class="grid size-12 place-items-center border-2 border-dashed border-muted-foreground/20 text-muted-foreground/30">
+            <PhGlobe class="size-6" />
+          </div>
+          <div>
+            <p class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">No Requests</p>
+            <p class="mt-0.5 font-mono text-[9px] text-muted-foreground/40">Create a request to get started.</p>
+          </div>
+        </div>
+      </template>
+
       <!-- Root Requests -->
       <div class="space-y-0.5 mb-2">
         <div v-if="dragOverTarget === `root-0` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />

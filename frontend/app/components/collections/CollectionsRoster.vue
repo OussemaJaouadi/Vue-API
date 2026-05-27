@@ -12,6 +12,7 @@ defineProps<{
   activeCollectionName: string
   totalRequestCount: number
   policyResolver: (name: string) => { defaultEnvironment: string }
+  loading?: boolean
 }>()
 
 defineEmits<{
@@ -23,51 +24,72 @@ defineEmits<{
   <aside class="flex flex-col w-64 border-r bg-card/30 shrink-0 select-none overflow-hidden">
     <div class="flex h-10 items-center justify-between border-b bg-muted/30 px-3 shrink-0">
       <span class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground">Registry</span>
-      <span class="font-mono text-[9px] font-black uppercase tracking-widest text-primary/40">{{ groups.length }} groups</span>
+      <span v-if="!loading" class="font-mono text-[9px] font-black uppercase tracking-widest text-primary/40">{{ groups.length }} groups</span>
+      <div v-else class="h-2 w-12 bg-muted-foreground/15 animate-pulse" />
     </div>
 
     <div class="flex-1 p-1 space-y-0.5 overflow-y-auto custom-scrollbar">
-      <button
-        class="group relative flex h-12 w-full items-center justify-between px-3 transition-all duration-200 outline-none shrink-0"
-        :class="activeCollectionName === 'all' ? 'bg-primary/10 text-foreground' : 'text-muted-foreground/70 hover:bg-primary/5 hover:text-foreground'"
-        type="button"
-        @click="$emit('select', 'all')"
-      >
-        <div v-if="activeCollectionName === 'all'" class="wb-active-indicator" />
-        <span class="font-mono text-[11px] font-black uppercase tracking-tight" :class="activeCollectionName === 'all' ? 'text-primary' : 'group-hover:text-foreground'">
-          All Collections
-        </span>
-        <span class="font-mono text-[9px] font-black opacity-70 group-hover:opacity-60">{{ totalRequestCount }}</span>
-      </button>
+      <!-- Loading State -->
+      <template v-if="loading">
+        <div v-for="i in 3" :key="i" class="flex h-12 w-full items-center gap-3 px-3">
+          <div class="size-5 bg-muted-foreground/10 animate-pulse" />
+          <div class="flex-1 space-y-1">
+            <div class="h-3 w-28 bg-muted-foreground/15 animate-pulse" />
+            <div class="h-2 w-16 bg-muted-foreground/10 animate-pulse" />
+          </div>
+        </div>
+      </template>
 
-      <div class="h-px bg-border/20 my-1 mx-2" />
+      <!-- Empty State -->
+      <template v-else-if="groups.length === 0">
+        <div class="flex flex-col items-center gap-2 px-4 pt-10 text-center">
+          <span class="font-mono text-[10px] text-muted-foreground/40 italic">No collections yet</span>
+        </div>
+      </template>
 
-      <button
-        v-for="group in groups"
-        :key="group.name"
-        class="group relative flex h-12 w-full items-center gap-3 px-3 transition-all duration-200 outline-none shrink-0"
-        :class="activeCollectionName === group.name ? 'bg-primary/10 text-foreground' : 'text-muted-foreground/70 hover:bg-primary/5 hover:text-foreground'"
-        type="button"
-        @click="$emit('select', group.name)"
-      >
-        <div v-if="activeCollectionName === group.name" class="wb-active-indicator" />
-        
-        <component 
-          :is="WORKBENCH_ICONS[group.icon]" 
-          class="size-4 shrink-0 transition-colors" 
-          :class="activeCollectionName === group.name ? 'text-primary' : 'text-muted-foreground/80 group-hover:text-primary/60'" 
-        />
-        
-        <span class="min-w-0 flex-1 text-left">
-          <span class="block truncate font-mono text-[11px] font-black uppercase tracking-tight transition-colors" :class="activeCollectionName === group.name ? 'text-primary' : 'group-hover:text-foreground'">
-            {{ group.name }}
+      <template v-else>
+        <button
+          class="group relative flex h-12 w-full items-center justify-between px-3 transition-all duration-200 outline-none shrink-0"
+          :class="activeCollectionName === 'all' ? 'bg-primary/10 text-foreground' : 'text-muted-foreground/70 hover:bg-primary/5 hover:text-foreground'"
+          type="button"
+          @click="$emit('select', 'all')"
+        >
+          <div v-if="activeCollectionName === 'all'" class="wb-active-indicator" />
+          <span class="font-mono text-[11px] font-black uppercase tracking-tight" :class="activeCollectionName === 'all' ? 'text-primary' : 'group-hover:text-foreground'">
+            All Collections
           </span>
-          <span class="mt-0.5 flex items-center justify-between gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-            <span class="font-mono text-[8px] font-black uppercase tracking-widest truncate">{{ policyResolver(group.name).defaultEnvironment }}</span>
-            <span class="font-mono text-[9px] font-black">{{ group.requests.length }}</span>
+          <span class="font-mono text-[9px] font-black opacity-70 group-hover:opacity-60">{{ totalRequestCount }}</span>
+        </button>
+
+        <div class="h-px bg-border/20 my-1 mx-2" />
+
+        <button
+          v-for="group in groups"
+          :key="group.name"
+          class="group relative flex h-12 w-full items-center gap-3 px-3 transition-all duration-200 outline-none shrink-0"
+          :class="activeCollectionName === group.name ? 'bg-primary/10 text-foreground' : 'text-muted-foreground/70 hover:bg-primary/5 hover:text-foreground'"
+          type="button"
+          @click="$emit('select', group.name)"
+        >
+          <div v-if="activeCollectionName === group.name" class="wb-active-indicator" />
+          
+          <component 
+            :is="WORKBENCH_ICONS[group.icon]" 
+            class="size-4 shrink-0 transition-colors" 
+            :class="activeCollectionName === group.name ? 'text-primary' : 'text-muted-foreground/80 group-hover:text-primary/60'" 
+          />
+          
+          <span class="min-w-0 flex-1 text-left">
+            <span class="block truncate font-mono text-[11px] font-black uppercase tracking-tight transition-colors" :class="activeCollectionName === group.name ? 'text-primary' : 'group-hover:text-foreground'">
+              {{ group.name }}
+            </span>
+            <span class="mt-0.5 flex items-center justify-between gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+              <span class="font-mono text-[8px] font-black uppercase tracking-widest truncate">{{ policyResolver(group.name).defaultEnvironment }}</span>
+              <span class="font-mono text-[9px] font-black">{{ group.requests.length }}</span>
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
+      </template>
     </div>
   </aside>
 </template>

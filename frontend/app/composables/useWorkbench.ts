@@ -1,18 +1,6 @@
 import { PhGlobe, PhLightning } from '@phosphor-icons/vue'
 import { useStorage } from '@vueuse/core'
 import type { Component } from 'vue'
-import {
-  mockWebSocketEvents,
-  mockActiveRequestId,
-  mockBody,
-  mockHeaders,
-  mockOpenTabIds,
-  mockQueryParams,
-  mockRequestTarget,
-  mockWorkbenchResponse,
-  mockWorkbenchResponses,
-  mockWorkbenchTree,
-} from '~/mock-data/workbench'
 
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'SOCKET'
 export type WorkbenchIconKey = 'PhGlobe' | 'PhLightning'
@@ -125,17 +113,20 @@ export const WORKBENCH_ICONS: Record<WorkbenchIconKey, Component> = {
 }
 
 export function useWorkbench() {
-  const treeItems = useState<TreeItem[]>('workbench:tree', () => structuredClone(mockWorkbenchTree))
+  const treeItems = useState<TreeItem[]>('workbench:tree', () => [])
   const rootRequests = useState<RequestItem[]>('workbench:root-requests', () => [])
-  
+  const collectionsLoading = useState<boolean>('workbench:collections-loading', () => true)
+
   onMounted(() => {
-    const hasSocket = treeItems.value.some(g => g.requests.some(r => r.method === 'SOCKET'))
-    if (!hasSocket && treeItems.value.length === 0) {
-      treeItems.value = structuredClone(mockWorkbenchTree)
+    if (treeItems.value.length === 0) {
+      loadCollections()
+    } else {
+      collectionsLoading.value = false
     }
   })
 
   const loadCollections = async () => {
+    collectionsLoading.value = true
     try {
       const { get } = useApiClient()
       const data = await get<any>('/v1/collections?workspaceId=default')
@@ -158,6 +149,8 @@ export function useWorkbench() {
       }))
     } catch (err) {
       console.error('Failed to load collections', err)
+    } finally {
+      collectionsLoading.value = false
     }
   }
 
@@ -166,7 +159,7 @@ export function useWorkbench() {
     ...treeItems.value.flatMap(group => group.requests)
   ])
 
-  const activeRequestId = useState<string>('workbench:active-request-id', () => mockActiveRequestId)
+  const activeRequestId = useState<string>('workbench:active-request-id', () => '')
   
   // Persistent Layout State
   const sidebarWidth = useStorage<number>('workbench:sidebar-width', 260)
@@ -174,11 +167,7 @@ export function useWorkbench() {
   const responseWidth = useStorage<number>('workbench:response-width', 400)
   const responsePosition = useStorage<'bottom' | 'right'>('workbench:response-position', 'bottom')
   
-  const openTabs = useState<RequestItem[]>('workbench:open-tabs', () => {
-    return mockOpenTabIds
-      .map(id => allRequests.value.find(request => request.id === id))
-      .filter((request): request is RequestItem => Boolean(request))
-  })
+  const openTabs = useState<RequestItem[]>('workbench:open-tabs', () => [])
 
   const activeRequest = computed<RequestItem>(() => {
     // Ensure we always return a RequestItem to satisfy consumers.
@@ -197,11 +186,11 @@ export function useWorkbench() {
   })
   
   const loading = useState<boolean>('workbench:loading', () => false)
-  const responseData = useState<WorkbenchResponse | null>('workbench:response', () => structuredClone(mockWorkbenchResponse))
-  const requestTarget = useState<RequestTarget>('workbench:request-target', () => structuredClone(mockRequestTarget))
-  const queryParams = useState<QueryParamItem[]>('workbench:query-params', () => structuredClone(mockQueryParams))
-  const headers = useState<HeaderItem[]>('workbench:headers', () => structuredClone(mockHeaders))
-  const requestBody = useState<string>('workbench:body', () => mockBody)
+  const responseData = useState<WorkbenchResponse | null>('workbench:response', () => null)
+  const requestTarget = useState<RequestTarget>('workbench:request-target', () => ({ baseUrl: '', path: '' }))
+  const queryParams = useState<QueryParamItem[]>('workbench:query-params', () => [])
+  const headers = useState<HeaderItem[]>('workbench:headers', () => [])
+  const requestBody = useState<string>('workbench:body', () => '')
   const requestBodyLanguage = useState<BodyLanguage>('workbench:body-language', () => 'json')
   const webSocketState = useState<WebSocketConnectionState>('workbench:ws-state', () => 'idle')
   const webSocketMessage = useState<string>('workbench:ws-message', () => `{
@@ -608,6 +597,7 @@ export function useWorkbench() {
     removeHeader,
     moveHeader,
     loadCollections,
+    collectionsLoading,
     addFolder,
     addRequest,
     moveRequest,

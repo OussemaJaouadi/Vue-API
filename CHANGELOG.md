@@ -72,6 +72,9 @@
 - Wired frontend environments page to real backend API (`useEnvironments` composable).
 - Wired frontend collections page to load from real backend API (`loadCollections` in workbench).
 - Made `addFolder`, `addRequest`, `deleteItem` in workbench composable call backend API.
+- Added skeleton loading states and empty states for environments and collections pages.
+- Added skeleton loading state for WorkbenchSidebar.
+- Removed mock data fallback from workbench composable (useWorkbench no longer imports mock data).
 
 ## Old
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
 import CollectionsHeader from '~/components/collections/CollectionsHeader.vue'
 import CollectionsRoster from '~/components/collections/CollectionsRoster.vue'
 import CollectionsWorkbench from '~/components/collections/CollectionsWorkbench.vue'
@@ -7,7 +6,6 @@ import CollectionsPolicyPanel from '~/components/collections/CollectionsPolicyPa
 import CollectionsImportSheet from '~/components/collections/CollectionsImportSheet.vue'
 
 const workbench = useWorkbench()
-onMounted(() => workbench.loadCollections())
 
 const {
   requestCount,
@@ -98,6 +96,7 @@ const confirmImport = () => {
 
     <div class="flex-1 flex min-w-0 gap-3 overflow-x-auto p-3 bg-muted/5">
       <CollectionsRoster
+        :loading="workbench.collectionsLoading.value"
         :groups="workbench.treeItems.value"
         :active-collection-name="activeCollectionName"
         :total-request-count="requestCount"
