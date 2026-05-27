@@ -67,6 +67,11 @@
 - Fixed remaining `text-muted-foreground/20` on delete icons and empty states in `CollectionsWorkbench`, `WorkbenchAuthPanel`, `EnvironmentsPolicyPanel` (bumped to `/50`).
 - Fixed remaining `active:scale-90` and `active:scale-95` patterns in `WorkbenchSidebar`, `CollectionsWorkbench`, `AccessPolicyPanel`, `AccessGrantEditor` (standardized to tactile translate pattern).
 - Fixed `border-muted-foreground/20` on checkbox toggles in `HeadersTable` and `ParamsTable` (bumped to `/40`).
+- Added backend CRUD for Collections (folders + requests) and Environments (environments + variables) with 4 new DB tables.
+- Added `/v1/collections` and `/v1/environments` route groups with auth middleware.
+- Wired frontend environments page to real backend API (`useEnvironments` composable).
+- Wired frontend collections page to load from real backend API (`loadCollections` in workbench).
+- Made `addFolder`, `addRequest`, `deleteItem` in workbench composable call backend API.
 
 ## Old
 

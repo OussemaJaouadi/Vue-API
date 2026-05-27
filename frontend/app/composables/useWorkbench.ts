@@ -26,6 +26,7 @@ export interface RequestItem {
 }
 
 export interface TreeItem {
+  id?: string
   name: string
   icon: WorkbenchIconKey
   requests: RequestItem[]
@@ -129,10 +130,36 @@ export function useWorkbench() {
   
   onMounted(() => {
     const hasSocket = treeItems.value.some(g => g.requests.some(r => r.method === 'SOCKET'))
-    if (!hasSocket) {
+    if (!hasSocket && treeItems.value.length === 0) {
       treeItems.value = structuredClone(mockWorkbenchTree)
     }
   })
+
+  const loadCollections = async () => {
+    try {
+      const { get } = useApiClient()
+      const data = await get<any>('/v1/collections?workspaceId=default')
+      treeItems.value = data.collections.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        icon: c.icon || 'PhGlobe',
+        requests: c.requests.map((r: any) => ({
+          id: r.id,
+          method: r.method,
+          name: r.name,
+          path: r.path,
+        })),
+      }))
+      rootRequests.value = (data.rootRequests || []).map((r: any) => ({
+        id: r.id,
+        method: r.method,
+        name: r.name,
+        path: r.path,
+      }))
+    } catch (err) {
+      console.error('Failed to load collections', err)
+    }
+  }
 
   const allRequests = computed(() => [
     ...rootRequests.value,
@@ -226,21 +253,50 @@ export function useWorkbench() {
 
   const isWebSocketRequest = computed(() => activeRequest.value.method === 'SOCKET')
 
-  const addFolder = (name: string = 'New Collection') => {
-    treeItems.value.push({
-      name,
-      icon: 'PhGlobe',
-      requests: []
-    })
+  const addFolder = async (name: string = 'New Collection') => {
+    try {
+      const { post } = useApiClient()
+      const created = await post<any>('/v1/collections', {
+        workspaceId: 'default',
+        name,
+        icon: 'PhGlobe',
+      })
+      treeItems.value.push({
+        id: created.id,
+        name: created.name,
+        icon: created.icon || 'PhGlobe',
+        requests: []
+      })
+    } catch (err) {
+      console.error('Failed to create collection', err)
+    }
   }
 
-  const addRequest = (folderName?: string) => {
+  const addRequest = async (folderName?: string) => {
     const newReq: RequestItem = {
       id: crypto.randomUUID(),
       method: 'GET',
       name: 'New Request',
       path: '/path',
     }
+    try {
+      const { post } = useApiClient()
+      const folderId = folderName ? treeItems.value.find(f => f.name === folderName)?.id : undefined
+      const created = await post<any>('/v1/collections/requests', {
+        workspaceId: 'default',
+        collectionId: folderId || null,
+        method: 'GET',
+        name: 'New Request',
+        path: '/path',
+      })
+      newReq.id = created.id
+      newReq.method = created.method
+      newReq.name = created.name
+      newReq.path = created.path
+    } catch (err) {
+      console.error('Failed to create request', err)
+    }
+
     if (folderName) {
       const folder = treeItems.value.find(f => f.name === folderName)
       if (folder) folder.requests.push(newReq)
@@ -290,19 +346,28 @@ export function useWorkbench() {
     }
   }
 
-  const deleteItem = (id: string, isFolder: boolean) => {
-    if (isFolder) {
-      const folder = treeItems.value.find(f => f.name === id)
-      if (folder) {
-        folder.requests.forEach(r => closeTab(r.id))
+  const deleteItem = async (identifier: string, isFolder: boolean) => {
+    try {
+      const { delete: del } = useApiClient()
+      if (isFolder) {
+        const folder = treeItems.value.find(f => f.id === identifier || f.name === identifier)
+        if (folder?.id) {
+          await del(`/v1/collections/${folder.id}`)
+        }
+        if (folder) {
+          folder.requests.forEach(r => closeTab(r.id))
+        }
+        treeItems.value = treeItems.value.filter(f => f.id !== identifier && f.name !== identifier)
+      } else {
+        await del(`/v1/collections/requests/${identifier}`)
+        closeTab(identifier)
+        rootRequests.value = rootRequests.value.filter(r => r.id !== identifier)
+        treeItems.value.forEach(f => {
+          f.requests = f.requests.filter(r => r.id !== identifier)
+        })
       }
-      treeItems.value = treeItems.value.filter(f => f.name !== id)
-    } else {
-      closeTab(id)
-      rootRequests.value = rootRequests.value.filter(r => r.id !== id)
-      treeItems.value.forEach(f => {
-        f.requests = f.requests.filter(r => r.id !== id)
-      })
+    } catch (err) {
+      console.error('Failed to delete', err)
     }
   }
 
@@ -542,6 +607,7 @@ export function useWorkbench() {
     addHeader,
     removeHeader,
     moveHeader,
+    loadCollections,
     addFolder,
     addRequest,
     moveRequest,

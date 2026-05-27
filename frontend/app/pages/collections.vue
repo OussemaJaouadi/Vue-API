@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import CollectionsHeader from '~/components/collections/CollectionsHeader.vue'
 import CollectionsRoster from '~/components/collections/CollectionsRoster.vue'
 import CollectionsWorkbench from '~/components/collections/CollectionsWorkbench.vue'
@@ -6,6 +7,8 @@ import CollectionsPolicyPanel from '~/components/collections/CollectionsPolicyPa
 import CollectionsImportSheet from '~/components/collections/CollectionsImportSheet.vue'
 
 const workbench = useWorkbench()
+onMounted(() => workbench.loadCollections())
+
 const {
   requestCount,
   activeCollectionName,
