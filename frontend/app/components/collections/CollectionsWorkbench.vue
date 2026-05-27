@@ -71,7 +71,7 @@ defineEmits<{
           <div class="flex items-center gap-2">
             <span class="font-mono text-[9px] font-black text-muted-foreground/70">{{ group.requests.length }} items</span>
             <button
-              class="flex size-6 items-center justify-center text-muted-foreground/20 transition-all hover:bg-destructive/10 hover:text-destructive active:scale-95"
+              class="flex size-6 items-center justify-center text-muted-foreground/50 transition-all hover:bg-destructive/10 hover:text-destructive active:translate-x-0.5 active:translate-y-0.5"
               type="button"
               @click="$emit('deleteCollection', group.name)"
             >
@@ -112,7 +112,7 @@ defineEmits<{
             <div class="absolute left-0 h-[40%] w-0.75 bg-primary/0 transition-all group-hover:bg-primary/40 group-hover:h-[60%]" />
           </div>
 
-          <div v-if="group.requests.length === 0" class="flex h-16 items-center justify-center px-3 font-mono text-[9px] uppercase tracking-widest text-muted-foreground/20 italic">
+          <div v-if="group.requests.length === 0" class="flex h-16 items-center justify-center px-3 font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50 italic">
             Collection contains no records
           </div>
         </div>

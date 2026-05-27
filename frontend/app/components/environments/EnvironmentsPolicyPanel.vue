@@ -98,7 +98,7 @@ defineEmits<{
             <span class="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active Secrets</span>
             <span 
               class="font-mono text-[11px] font-black uppercase tracking-widest px-2 py-0.5 border-2"
-              :class="secretCount > 0 ? 'border-amber-500/20 bg-amber-500/5 text-amber-500' : 'border-border/40 text-muted-foreground/20'"
+              :class="secretCount > 0 ? 'border-amber-500/20 bg-amber-500/5 text-amber-500' : 'border-border/40 text-muted-foreground/50'"
             >
               {{ secretCount }}
             </span>

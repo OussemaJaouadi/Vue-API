@@ -171,7 +171,7 @@ const previewRows = computed(() => {
       </div>
 
       <div v-else class="py-12 text-center">
-        <p class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground/20 italic">
+        <p class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 italic">
           {{ authMode === 'inherit' ? 'Inheriting from parent authority' : 'Protocol selection pending' }}
         </p>
       </div>
@@ -187,7 +187,7 @@ const previewRows = computed(() => {
           <span class="font-black text-foreground/80 border-r border-border/5 h-full flex items-center">{{ row.key }}</span>
           <span class="truncate px-4 font-bold text-muted-foreground">{{ row.value }}</span>
           <span class="text-right border-l border-border/5 h-full flex items-center justify-end">
-            <span class="px-2 py-0.5 border text-[8px] font-black uppercase tracking-tighter" :class="row.source === 'off' ? 'border-border text-muted-foreground/20' : 'border-primary/30 text-primary'">
+            <span class="px-2 py-0.5 border text-[8px] font-black uppercase tracking-tighter" :class="row.source === 'off' ? 'border-border text-muted-foreground/50' : 'border-primary/30 text-primary'">
               {{ row.source }}
             </span>
           </span>

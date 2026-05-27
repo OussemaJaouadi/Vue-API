@@ -118,7 +118,7 @@ const getRoleLabel = (value: string) => props.roleOptions.find(opt => opt.value 
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <button 
-                  class="flex h-8 w-full items-center justify-between border-2 px-2 text-center font-mono text-[9px] font-black uppercase tracking-widest outline-none transition-all duration-300 hover:shadow-md active:scale-95 active:translate-x-0.5 active:translate-y-0.5"
+                  class="flex h-8 w-full items-center justify-between border-2 px-2 text-center font-mono text-[9px] font-black uppercase tracking-widest outline-none transition-all duration-300 hover:shadow-md active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                   :class="accessTone(row.level)"
                 >
                   <span class="truncate flex-1">{{ getOptionLabel(row.level) }}</span>

@@ -99,7 +99,7 @@ onMounted(() => {
       >
         <div
           v-if="dropTarget?.id === param.id"
-          class="pointer-events-none absolute inset-x-0 z-10 h-0.5 bg-primary shadow-[0_0_10px_rgba(16,185,129,0.45)]"
+          class="pointer-events-none absolute inset-x-0 z-10 h-0.5 bg-primary"
           :class="dropTarget.position === 'before' ? 'top-0' : 'bottom-0'"
         />
 
@@ -117,7 +117,7 @@ onMounted(() => {
         >
           <div
             class="flex size-4 items-center justify-center border-2 transition-all"
-            :class="param.enabled ? 'border-primary bg-primary text-background' : 'border-muted-foreground/20 hover:border-primary/40'"
+            :class="param.enabled ? 'border-primary bg-primary text-background' : 'border-muted-foreground/40 hover:border-primary/40'"
           >
             <div v-if="param.enabled" class="size-2 bg-background" />
           </div>
@@ -140,7 +140,7 @@ onMounted(() => {
         </div>
 
         <button
-          class="flex items-center justify-center text-muted-foreground/20 outline-none transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+          class="flex items-center justify-center text-muted-foreground/50 outline-none transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
           :class="isGhostParam(param, index) ? 'invisible' : 'opacity-0'"
           type="button"
           @click="workbench.removeQueryParam(param.id)"

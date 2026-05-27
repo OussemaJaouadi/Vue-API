@@ -91,7 +91,7 @@ const emit = defineEmits<{
               <span class="block truncate font-mono text-[8px] font-bold uppercase tracking-widest text-muted-foreground/80">{{ target.section }}</span>
             </span>
             <button
-              class="h-7 border border-primary/20 bg-primary/5 px-2 font-mono text-[8px] font-black uppercase tracking-widest text-primary transition-all duration-300 hover:bg-primary/20 hover:shadow-sm active:scale-95"
+              class="h-7 border-2 border-primary/20 bg-primary/5 px-2 font-mono text-[8px] font-black uppercase tracking-widest text-primary transition-all duration-300 hover:bg-primary/20 hover:shadow-sm active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
               type="button"
               @click="emit('resolveDenied', target.section, target.name)"
             >

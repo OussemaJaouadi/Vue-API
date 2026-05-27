@@ -62,6 +62,11 @@
 - Fixed type errors in `mock-data/workbench.ts` (string sizes→number, removed stale `decoded` property).
 - Fixed type errors in `useWorkbench.ts` (`appendWebSocketEvent` signature, error response type, added `moveHeader` for headers table drag-to-reorder).
 - Fixed type error in `access.vue` (typed `accessOptions` as `AccessLevel[]`).
+- Removed drag-drop glow shadows (`shadow-[0_0_10px_rgba(16,185,129,0.45)]`) from `WorkbenchHeadersTable` and `WorkbenchParamsTable`.
+- Removed glow shadow and `animate-ping` from `WorkbenchResizer` handle.
+- Fixed remaining `text-muted-foreground/20` on delete icons and empty states in `CollectionsWorkbench`, `WorkbenchAuthPanel`, `EnvironmentsPolicyPanel` (bumped to `/50`).
+- Fixed remaining `active:scale-90` and `active:scale-95` patterns in `WorkbenchSidebar`, `CollectionsWorkbench`, `AccessPolicyPanel`, `AccessGrantEditor` (standardized to tactile translate pattern).
+- Fixed `border-muted-foreground/20` on checkbox toggles in `HeadersTable` and `ParamsTable` (bumped to `/40`).
 
 ## Old
 

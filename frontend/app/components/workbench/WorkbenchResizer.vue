@@ -68,18 +68,18 @@ useEventListener('mouseup', () => {
   >
     <!-- Technical Handle -->
     <div 
-      class="absolute bg-primary transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+      class="absolute bg-primary/50 transition-all duration-300"
       :class="[
         orientation === 'horizontal' 
           ? 'w-[2px] h-12 opacity-20 group-hover:opacity-100 group-hover:h-20' 
           : 'h-[2px] w-12 opacity-20 group-hover:opacity-100 group-hover:w-20',
-        isDragging ? 'opacity-100 scale-x-150' : ''
+        isDragging ? 'opacity-100' : ''
       ]"
     />
     
     <div 
       v-if="isDragging"
-      class="absolute bg-primary/40 animate-ping"
+      class="absolute bg-primary/40"
       :class="orientation === 'horizontal' ? 'w-px h-full' : 'h-px w-full'"
     />
   </div>

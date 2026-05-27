@@ -192,8 +192,8 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
             </div>
             
             <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-              <button @click.stop="startRename(request.id, request.name)" class="p-1 hover:text-primary active:scale-90"><PhNotePencil class="size-3.5" /></button>
-              <button @click.stop="workbench.deleteItem(request.id, false)" class="p-1 hover:text-destructive active:scale-90"><PhTrash class="size-3.5" /></button>
+              <button @click.stop="startRename(request.id, request.name)" class="p-1 hover:text-primary active:translate-x-0.5 active:translate-y-0.5"><PhNotePencil class="size-3.5" /></button>
+              <button @click.stop="workbench.deleteItem(request.id, false)" class="p-1 hover:text-destructive active:translate-x-0.5 active:translate-y-0.5"><PhTrash class="size-3.5" /></button>
             </div>
           </button>
         </template>
