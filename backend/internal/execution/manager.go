@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
 	"vue-api/backend/internal/events"
 )
 
@@ -36,7 +37,6 @@ func NewWSManager(broker *events.Broker) *WSManager {
 func (m *WSManager) Connect(ctx context.Context, userID string, req Request) (string, error) {
 	dialer := websocket.Dialer{
 		HandshakeTimeout: 10 * time.Second,
-		TLSClientConfig:  nil, // Optional: handle custom certs
 	}
 
 	header := http.Header{}
@@ -52,7 +52,7 @@ func (m *WSManager) Connect(ctx context.Context, userID string, req Request) (st
 	}
 
 	executionID := fmt.Sprintf("ws_%d", time.Now().UnixNano())
-	
+
 	execCtx, cancel := context.WithCancel(context.Background())
 	exec := &WSExecution{
 		ID:        executionID,
@@ -68,6 +68,17 @@ func (m *WSManager) Connect(ctx context.Context, userID string, req Request) (st
 	m.mu.Unlock()
 
 	go m.handleRead(execCtx, exec)
+
+	if m.eventBroker != nil {
+		m.eventBroker.PublishToUser(userID, events.Event{
+			Type: "ws.connected",
+			Data: map[string]any{
+				"executionId": executionID,
+				"target":      req.URL,
+				"timestamp":   time.Now().Format(time.RFC3339),
+			},
+		})
+	}
 
 	return executionID, nil
 }
@@ -113,33 +124,25 @@ func (m *WSManager) Close(executionID string) error {
 	}
 
 	exec.Cancel()
-	return exec.Conn.Close()
+	err := exec.Conn.Close()
+
+	if m.eventBroker != nil {
+		m.eventBroker.PublishToUser(exec.UserID, events.Event{
+			Type: "ws.closed",
+			Data: map[string]any{
+				"executionId": executionID,
+				"timestamp":   time.Now().Format(time.RFC3339),
+			},
+		})
+	}
+
+	return err
 }
 
 func (m *WSManager) handleRead(ctx context.Context, exec *WSExecution) {
 	defer func() {
 		m.Close(exec.ID)
-		if m.eventBroker != nil {
-			m.eventBroker.PublishToUser(exec.UserID, events.Event{
-				Type: "ws.closed",
-				Data: map[string]any{
-					"executionId": exec.ID,
-					"timestamp":   time.Now().Format(time.RFC3339),
-				},
-			})
-		}
 	}()
-
-	if m.eventBroker != nil {
-		m.eventBroker.PublishToUser(exec.UserID, events.Event{
-			Type: "ws.connected",
-			Data: map[string]any{
-				"executionId": exec.ID,
-				"target":      exec.Target,
-				"timestamp":   time.Now().Format(time.RFC3339),
-			},
-		})
-	}
 
 	for {
 		messageType, payload, err := exec.Conn.ReadMessage()

@@ -20,7 +20,10 @@ func NewEnvironmentRepository(db *gorm.DB) *EnvironmentRepository {
 
 func (repo *EnvironmentRepository) ListEnvironments(ctx context.Context, workspaceID string) ([]environment.Environment, error) {
 	var models []EnvironmentModel
-	if err := repo.db.WithContext(ctx).Where("workspace_id = ?", workspaceID).Order("sort_order ASC, name ASC").Find(&models).Error; err != nil {
+	if err := repo.db.WithContext(ctx).
+		Where("workspace_id = ?", workspaceID).
+		Order("sort_order ASC, name ASC").
+		Find(&models).Error; err != nil {
 		return nil, err
 	}
 
@@ -34,7 +37,10 @@ func (repo *EnvironmentRepository) ListEnvironments(ctx context.Context, workspa
 
 func (repo *EnvironmentRepository) ListVariables(ctx context.Context, environmentID string) ([]environment.Variable, error) {
 	var models []VariableModel
-	if err := repo.db.WithContext(ctx).Where("environment_id = ?", environmentID).Order("sort_order ASC, key ASC").Find(&models).Error; err != nil {
+	if err := repo.db.WithContext(ctx).
+		Where("environment_id = ?", environmentID).
+		Order("sort_order ASC, key ASC").
+		Find(&models).Error; err != nil {
 		return nil, err
 	}
 
@@ -48,7 +54,9 @@ func (repo *EnvironmentRepository) ListVariables(ctx context.Context, environmen
 
 func (repo *EnvironmentRepository) CreateEnvironment(ctx context.Context, params environment.CreateEnvironmentParams) (environment.Environment, error) {
 	var count int64
-	if err := repo.db.WithContext(ctx).Model(&EnvironmentModel{}).Where("workspace_id = ? AND name = ?", params.WorkspaceID, params.Name).Count(&count).Error; err != nil {
+	if err := repo.db.WithContext(ctx).Model(&EnvironmentModel{}).
+		Where("workspace_id = ? AND name = ?", params.WorkspaceID, params.Name).
+		Count(&count).Error; err != nil {
 		return environment.Environment{}, err
 	}
 	if count > 0 {
@@ -78,7 +86,9 @@ func (repo *EnvironmentRepository) CreateEnvironment(ctx context.Context, params
 
 func (repo *EnvironmentRepository) CreateVariable(ctx context.Context, params environment.CreateVariableParams) (environment.Variable, error) {
 	var count int64
-	if err := repo.db.WithContext(ctx).Model(&VariableModel{}).Where("environment_id = ? AND key = ?", params.EnvironmentID, params.Key).Count(&count).Error; err != nil {
+	if err := repo.db.WithContext(ctx).Model(&VariableModel{}).
+		Where("environment_id = ? AND key = ?", params.EnvironmentID, params.Key).
+		Count(&count).Error; err != nil {
 		return environment.Variable{}, err
 	}
 	if count > 0 {

@@ -18,12 +18,11 @@ type httpService struct {
 func NewService() Service {
 	return &httpService{
 		client: &http.Client{
-			// Timeouts are handled per request via context
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // Optional: make configurable
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			},
 		},
 	}
@@ -59,14 +58,12 @@ func (s *httpService) Execute(ctx context.Context, req Request) (Response, error
 		}
 	}
 
-	var ttfb time.Duration
 	var start time.Time
-	var gotFirstResponseByte time.Time
+	var ttfb time.Duration
 
 	trace := &httptrace.ClientTrace{
 		GotFirstResponseByte: func() {
-			gotFirstResponseByte = time.Now()
-			ttfb = gotFirstResponseByte.Sub(start)
+			ttfb = time.Since(start)
 		},
 	}
 	httpReq = httpReq.WithContext(httptrace.WithClientTrace(httpReq.Context(), trace))
@@ -74,9 +71,7 @@ func (s *httpService) Execute(ctx context.Context, req Request) (Response, error
 	start = time.Now()
 	resp, err := s.client.Do(httpReq)
 	if err != nil {
-		return Response{
-			Error: err.Error(),
-		}, nil
+		return Response{}, err
 	}
 	defer resp.Body.Close()
 
@@ -108,6 +103,6 @@ func (s *httpService) Execute(ctx context.Context, req Request) (Response, error
 		Size:            int64(len(bodyBytes)),
 		TTFB:            float64(ttfb.Nanoseconds()) / 1e6,
 		ExecutionTarget: parsedURL.Host,
-		RequestID:       "req_" + strings.ToLower(strings.ReplaceAll(time.Now().Format("20060102150405.000"), ".", "")), // Simple unique ID
+		RequestID:       "req_" + strings.ToLower(strings.ReplaceAll(time.Now().Format("20060102150405.000"), ".", "")),
 	}, nil
 }

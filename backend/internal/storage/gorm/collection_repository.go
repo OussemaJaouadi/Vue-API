@@ -20,7 +20,10 @@ func NewCollectionRepository(db *gorm.DB) *CollectionRepository {
 
 func (repo *CollectionRepository) ListFolders(ctx context.Context, workspaceID string) ([]collection.Folder, error) {
 	var models []FolderModel
-	if err := repo.db.WithContext(ctx).Where("workspace_id = ?", workspaceID).Order("sort_order ASC, name ASC").Find(&models).Error; err != nil {
+	if err := repo.db.WithContext(ctx).
+		Where("workspace_id = ?", workspaceID).
+		Order("sort_order ASC, name ASC").
+		Find(&models).Error; err != nil {
 		return nil, err
 	}
 
@@ -59,7 +62,9 @@ func (repo *CollectionRepository) ListRootRequests(ctx context.Context, workspac
 
 func (repo *CollectionRepository) CreateFolder(ctx context.Context, params collection.CreateFolderParams) (collection.Folder, error) {
 	var count int64
-	if err := repo.db.WithContext(ctx).Model(&FolderModel{}).Where("workspace_id = ? AND name = ?", params.WorkspaceID, params.Name).Count(&count).Error; err != nil {
+	if err := repo.db.WithContext(ctx).Model(&FolderModel{}).
+		Where("workspace_id = ? AND name = ?", params.WorkspaceID, params.Name).
+		Count(&count).Error; err != nil {
 		return collection.Folder{}, err
 	}
 	if count > 0 {
