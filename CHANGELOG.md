@@ -48,6 +48,23 @@
 
 ## New
 
+- Darkened `--muted-foreground` from oklch(0.552→0.45) in light mode and lightened from oklch(0.765→0.88) in dark mode for WCAG-compliant text contrast.
+- Raised fractional opacity text classes globally: `/10→/40`, `/15→/50`, `/20→/50`, `/30→/60`, `/40→/65`, `/55→/70`.
+- Raised `placeholder:text-muted-foreground` from `/20→/50` across all inputs.
+- Restructured `index.vue` outer shell to `h-[calc(100dvh-5.5rem)] border bg-card` matching Access and Environments page layout.
+- Standardized all tactile buttons from `active:scale-95` to `active:translate-x-0.5 active:translate-y-0.5 active:shadow-none`.
+- Replaced indigo-500 command palette in `AppTopbar.vue` with primary color tokens.
+- Replaced indigo-500 localhost badge in `WorkbenchTabBar.vue` with primary color tokens.
+- Removed glowing `shadow-[0_-2px_8px_rgba(16,185,129,0.35)]` from active tab indicator.
+- Replaced custom `tracking-[0.15em]`, `tracking-[0.2em]`, `tracking-[0.25em]` values with `tracking-widest` across Response panel, AuthPanel, and empty states.
+- Reduced URL input font from `text-[13px]` to `text-[11px]` in `WorkbenchCommandBar.vue`.
+- Standardized Send button letter-spacing from `tracking-[0.2em]` to `tracking-widest`.
+- Fixed type errors in `mock-data/workbench.ts` (string sizes→number, removed stale `decoded` property).
+- Fixed type errors in `useWorkbench.ts` (`appendWebSocketEvent` signature, error response type, added `moveHeader` for headers table drag-to-reorder).
+- Fixed type error in `access.vue` (typed `accessOptions` as `AccessLevel[]`).
+
+## Old
+
 - Added Access Control page with user roster, grant editor, policy panel, execution matrix, and invite sheet.
 - Added Collections page with expand/collapse tree, environment policies, and multi-format import (OpenAPI, Swagger, Postman, Workbench).
 - Added Environments page with variable table, secret masking, visibility tiers, and danger-zone delete.
@@ -64,9 +81,6 @@
 - Added AppSidebar nav items with route targets and floating theme dropdown; added AppTopbar accent refinements.
 - Added custom-scrollbar, workbench-shadow, wb-active-indicator, and btn-tactile CSS utilities.
 - Fixed error handling in login, register, and API client to safely display non-string errors.
-
-## Old
-
 - Integrated workbench with real backend execution for HTTP/WS.
 - Refactored page architecture into modular composables (`useAccess`, `useCollections`, `useEnvironments`).
 - Added real-time WebSocket event timeline.
