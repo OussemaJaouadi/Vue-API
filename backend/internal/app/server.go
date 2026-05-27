@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/url"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"vue-api/backend/internal/execution"
 	apihttp "vue-api/backend/internal/http"
 	gormstorage "vue-api/backend/internal/storage/gorm"
+	"vue-api/backend/internal/workspace"
 )
 
 type Server struct {
@@ -79,6 +81,33 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 
 	collections := gormstorage.NewCollectionRepository(db)
 	environments := gormstorage.NewEnvironmentRepository(db)
+	workspaceRepo := gormstorage.NewWorkspaceRepository(db)
+	membershipRepo := gormstorage.NewMembershipRepository(db)
+	grantRepo := gormstorage.NewGrantRepository(db)
+
+	// Auto-create workspace for bootstrap manager
+	if bootstrapResult.Status == auth.BootstrapManagerSeeded {
+		ws, err := workspaceRepo.Create(ctx, workspace.CreateWorkspaceParams{
+			Name:            bootstrapResult.Username + "'s Workspace",
+			CreatedByUserID: bootstrapResult.UserID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("auto-create workspace: %w", err)
+		}
+		_, err = membershipRepo.Create(ctx, workspace.CreateMembershipParams{
+			WorkspaceID:     ws.ID,
+			UserID:          bootstrapResult.UserID,
+			Role:            "admin",
+			CreatedByUserID: bootstrapResult.UserID,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("auto-add admin membership: %w", err)
+		}
+		logger.Info("workspace auto-created for bootstrap manager",
+			"workspaceId", ws.ID,
+			"workspaceName", ws.Name,
+		)
+	}
 
 	eventDeps := apihttp.NewEventDeps(users, tokens)
 
@@ -115,6 +144,13 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 		WS:        wsManager,
 		Users:     users,
 		Tokens:    tokens,
+	})
+	apihttp.RegisterWorkspaceRoutes(router, apihttp.WorkspaceRouteDeps{
+		Workspaces:  workspaceRepo,
+		Memberships: membershipRepo,
+		Grants:      grantRepo,
+		Users:       users,
+		Tokens:      tokens,
 	})
 
 	return &Server{
