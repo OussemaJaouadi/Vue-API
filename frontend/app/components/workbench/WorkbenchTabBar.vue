@@ -4,6 +4,7 @@ import {
   PhTerminalWindow,
   PhX,
 } from '@phosphor-icons/vue'
+import { METHOD_BADGE_COLORS } from '~/composables/useWorkbench'
 
 const workbench = useWorkbench()
 </script>
@@ -23,7 +24,7 @@ const workbench = useWorkbench()
         <div class="flex min-w-0 items-center gap-2">
           <div 
             class="flex size-4.5 items-center justify-center border text-[8px] font-black tracking-tighter transition-all"
-            :class="workbench.activeRequestId.value === tab.id ? 'border-primary/30 bg-primary/10' : 'border-muted-foreground/20 bg-muted/20'"
+            :class="METHOD_BADGE_COLORS[tab.method]"
           >
             {{ tab.method.charAt(0) }}
           </div>
