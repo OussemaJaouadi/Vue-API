@@ -8,10 +8,12 @@ import (
 
 	"vue-api/backend/internal/auth"
 	"vue-api/backend/internal/collection"
+	"vue-api/backend/internal/workspace"
 )
 
 type CollectionRouteDeps struct {
 	Collections collection.Repository
+	Memberships workspace.MembershipRepository
 	Users       auth.UserRepository
 	Tokens      auth.TokenManager
 }
@@ -114,11 +116,18 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 
 	g.PUT("/:id", func(c echo.Context) error {
 		var req struct {
-			Name *string `json:"name"`
-			Icon *string `json:"icon"`
+			WorkspaceID string  `json:"workspaceId"`
+			Name        *string `json:"name"`
+			Icon        *string `json:"icon"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		}
+		if req.WorkspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
+		}
+		if !hasWorkspaceRole(c, deps.Memberships, req.WorkspaceID, "tester") {
+			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
 		}
 
 		folder, err := deps.Collections.UpdateFolder(c.Request().Context(), c.Param("id"), collection.UpdateFolderParams{
@@ -140,6 +149,14 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 	})
 
 	g.DELETE("/:id", func(c echo.Context) error {
+		workspaceID := c.QueryParam("workspaceId")
+		if workspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
+		}
+		if !hasWorkspaceRole(c, deps.Memberships, workspaceID, "tester") {
+			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		}
+
 		if err := deps.Collections.DeleteFolder(c.Request().Context(), c.Param("id")); err != nil {
 			if errors.Is(err, collection.ErrFolderNotFound) {
 				return echo.NewHTTPError(http.StatusNotFound, "Collection not found")
@@ -194,12 +211,19 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 
 	g.PUT("/requests/:id", func(c echo.Context) error {
 		var req struct {
-			Method *string `json:"method"`
-			Name   *string `json:"name"`
-			Path   *string `json:"path"`
+			WorkspaceID string  `json:"workspaceId"`
+			Method      *string `json:"method"`
+			Name        *string `json:"name"`
+			Path        *string `json:"path"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		}
+		if req.WorkspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
+		}
+		if !hasWorkspaceRole(c, deps.Memberships, req.WorkspaceID, "tester") {
+			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
 		}
 
 		request, err := deps.Collections.UpdateRequest(c.Request().Context(), c.Param("id"), collection.UpdateRequestParams{
@@ -223,6 +247,14 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 	})
 
 	g.DELETE("/requests/:id", func(c echo.Context) error {
+		workspaceID := c.QueryParam("workspaceId")
+		if workspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
+		}
+		if !hasWorkspaceRole(c, deps.Memberships, workspaceID, "tester") {
+			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		}
+
 		if err := deps.Collections.DeleteRequest(c.Request().Context(), c.Param("id")); err != nil {
 			if errors.Is(err, collection.ErrRequestNotFound) {
 				return echo.NewHTTPError(http.StatusNotFound, "Request not found")

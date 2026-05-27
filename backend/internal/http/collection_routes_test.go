@@ -15,9 +15,10 @@ import (
 	"vue-api/backend/internal/auth"
 	apihttp "vue-api/backend/internal/http"
 	gormstorage "vue-api/backend/internal/storage/gorm"
+	"vue-api/backend/internal/workspace"
 )
 
-func collectionTestDeps(t *testing.T) (*echo.Echo, string) {
+func collectionTestDeps(t *testing.T) (*echo.Echo, string, string) {
 	t.Helper()
 
 	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%s?mode=memory&cache=private", t.Name())), &gorm.Config{})
@@ -35,6 +36,9 @@ func collectionTestDeps(t *testing.T) (*echo.Echo, string) {
 		KeyLength:   32,
 	})
 
+	workspaceRepo := gormstorage.NewWorkspaceRepository(db)
+	membershipRepo := gormstorage.NewMembershipRepository(db)
+
 	router := echo.New()
 	router.HTTPErrorHandler = apihttp.CustomHTTPErrorHandler
 
@@ -48,6 +52,7 @@ func collectionTestDeps(t *testing.T) (*echo.Echo, string) {
 	})
 	apihttp.RegisterCollectionRoutes(router, apihttp.CollectionRouteDeps{
 		Collections: collections,
+		Memberships: membershipRepo,
 		Users:       users,
 		Tokens:      tokens,
 	})
@@ -62,9 +67,23 @@ func collectionTestDeps(t *testing.T) (*echo.Echo, string) {
 	var registerBody map[string]any
 	require.NoError(t, json.Unmarshal(registerResp.Body.Bytes(), &registerBody))
 	accessToken := registerBody["accessToken"].(string)
-	require.NotEmpty(t, accessToken)
+	userID := registerBody["userId"].(string)
 
-	return router, accessToken
+	ws, err := workspaceRepo.Create(nil, workspace.CreateWorkspaceParams{
+		Name:            "Test Workspace",
+		CreatedByUserID: userID,
+	})
+	require.NoError(t, err)
+
+	_, err = membershipRepo.Create(nil, workspace.CreateMembershipParams{
+		WorkspaceID:     ws.ID,
+		UserID:          userID,
+		Role:            "admin",
+		CreatedByUserID: userID,
+	})
+	require.NoError(t, err)
+
+	return router, accessToken, ws.ID
 }
 
 func TestCollectionRoutes_GetCollections_NoAuth(t *testing.T) {
@@ -84,7 +103,7 @@ func TestCollectionRoutes_GetCollections_NoAuth(t *testing.T) {
 }
 
 func TestCollectionRoutes_GetCollections_MissingWorkspaceID(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, _ := collectionTestDeps(t)
 
 	resp := performJSON(router, http.MethodGet, "/v1/collections", nil, token)
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
@@ -95,9 +114,9 @@ func TestCollectionRoutes_GetCollections_MissingWorkspaceID(t *testing.T) {
 }
 
 func TestCollectionRoutes_GetCollections_Empty(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
-	resp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId=ws1", nil, token)
+	resp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId="+wsID, nil, token)
 	assert.Equal(t, http.StatusOK, resp.Code)
 
 	var body map[string]any
@@ -107,10 +126,10 @@ func TestCollectionRoutes_GetCollections_Empty(t *testing.T) {
 }
 
 func TestCollectionRoutes_GetCollections_WithFoldersAndRequests(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	createResp := performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 		"name":        "Auth",
 		"icon":        "PhKey",
 	}, token)
@@ -121,7 +140,7 @@ func TestCollectionRoutes_GetCollections_WithFoldersAndRequests(t *testing.T) {
 	folderID := createBody["id"].(string)
 
 	createResp = performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]any{
-		"workspaceId":  "ws1",
+		"workspaceId":  wsID,
 		"collectionId": folderID,
 		"method":       "POST",
 		"name":         "Login",
@@ -130,14 +149,14 @@ func TestCollectionRoutes_GetCollections_WithFoldersAndRequests(t *testing.T) {
 	require.Equal(t, http.StatusCreated, createResp.Code)
 
 	createResp = performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]any{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 		"method":      "GET",
 		"name":        "Health",
 		"path":        "/health",
 	}, token)
 	require.Equal(t, http.StatusCreated, createResp.Code)
 
-	getResp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId=ws1", nil, token)
+	getResp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId="+wsID, nil, token)
 	require.Equal(t, http.StatusOK, getResp.Code)
 
 	var body map[string]any
@@ -159,10 +178,10 @@ func TestCollectionRoutes_GetCollections_WithFoldersAndRequests(t *testing.T) {
 }
 
 func TestCollectionRoutes_CreateFolder_MissingFields(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	resp := performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 	}, token)
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
@@ -173,25 +192,25 @@ func TestCollectionRoutes_CreateFolder_MissingFields(t *testing.T) {
 }
 
 func TestCollectionRoutes_CreateFolder_Duplicate(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 		"name":        "Auth",
 	}, token)
 
 	resp := performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 		"name":        "Auth",
 	}, token)
 	assert.Equal(t, http.StatusConflict, resp.Code)
 }
 
 func TestCollectionRoutes_UpdateFolder(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	createResp := performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 		"name":        "Old",
 	}, token)
 	require.Equal(t, http.StatusCreated, createResp.Code)
@@ -201,8 +220,9 @@ func TestCollectionRoutes_UpdateFolder(t *testing.T) {
 	folderID := createBody["id"].(string)
 
 	updateResp := performJSON(router, http.MethodPut, "/v1/collections/"+folderID, map[string]string{
-		"name": "Renamed",
-		"icon": "PhLock",
+		"workspaceId": wsID,
+		"name":        "Renamed",
+		"icon":        "PhLock",
 	}, token)
 	require.Equal(t, http.StatusOK, updateResp.Code)
 
@@ -213,19 +233,20 @@ func TestCollectionRoutes_UpdateFolder(t *testing.T) {
 }
 
 func TestCollectionRoutes_UpdateFolder_NotFound(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	resp := performJSON(router, http.MethodPut, "/v1/collections/nonexistent", map[string]string{
-		"name": "Nope",
+		"workspaceId": wsID,
+		"name":        "Nope",
 	}, token)
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 }
 
 func TestCollectionRoutes_DeleteFolder(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	createResp := performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 		"name":        "Temp",
 	}, token)
 	require.Equal(t, http.StatusCreated, createResp.Code)
@@ -234,22 +255,22 @@ func TestCollectionRoutes_DeleteFolder(t *testing.T) {
 	json.Unmarshal(createResp.Body.Bytes(), &createBody)
 	folderID := createBody["id"].(string)
 
-	delResp := performJSON(router, http.MethodDelete, "/v1/collections/"+folderID, nil, token)
+	delResp := performJSON(router, http.MethodDelete, "/v1/collections/"+folderID+"?workspaceId="+wsID, nil, token)
 	assert.Equal(t, http.StatusNoContent, delResp.Code)
 }
 
 func TestCollectionRoutes_DeleteFolder_NotFound(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
-	resp := performJSON(router, http.MethodDelete, "/v1/collections/nonexistent", nil, token)
+	resp := performJSON(router, http.MethodDelete, "/v1/collections/nonexistent?workspaceId="+wsID, nil, token)
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 }
 
 func TestCollectionRoutes_CreateRequest_MissingFields(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	resp := performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]string{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 	}, token)
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 
@@ -260,10 +281,10 @@ func TestCollectionRoutes_CreateRequest_MissingFields(t *testing.T) {
 }
 
 func TestCollectionRoutes_CreateRequest_DefaultsMethod(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	resp := performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]string{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 		"name":        "Default",
 		"path":        "/",
 	}, token)
@@ -275,10 +296,10 @@ func TestCollectionRoutes_CreateRequest_DefaultsMethod(t *testing.T) {
 }
 
 func TestCollectionRoutes_UpdateRequest(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	createResp := performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]string{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 		"method":      "GET",
 		"name":        "Old",
 		"path":        "/old",
@@ -290,9 +311,10 @@ func TestCollectionRoutes_UpdateRequest(t *testing.T) {
 	reqID := createBody["id"].(string)
 
 	updateResp := performJSON(router, http.MethodPut, "/v1/collections/requests/"+reqID, map[string]string{
-		"method": "POST",
-		"name":   "Updated",
-		"path":   "/new",
+		"workspaceId": wsID,
+		"method":      "POST",
+		"name":        "Updated",
+		"path":        "/new",
 	}, token)
 	require.Equal(t, http.StatusOK, updateResp.Code)
 
@@ -304,19 +326,20 @@ func TestCollectionRoutes_UpdateRequest(t *testing.T) {
 }
 
 func TestCollectionRoutes_UpdateRequest_NotFound(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	resp := performJSON(router, http.MethodPut, "/v1/collections/requests/nonexistent", map[string]string{
-		"name": "Nope",
+		"workspaceId": wsID,
+		"name":        "Nope",
 	}, token)
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 }
 
 func TestCollectionRoutes_DeleteRequest(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
 	createResp := performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]string{
-		"workspaceId": "ws1",
+		"workspaceId": wsID,
 		"name":        "Temp",
 		"path":        "/temp",
 	}, token)
@@ -326,13 +349,13 @@ func TestCollectionRoutes_DeleteRequest(t *testing.T) {
 	json.Unmarshal(createResp.Body.Bytes(), &createBody)
 	reqID := createBody["id"].(string)
 
-	delResp := performJSON(router, http.MethodDelete, "/v1/collections/requests/"+reqID, nil, token)
+	delResp := performJSON(router, http.MethodDelete, "/v1/collections/requests/"+reqID+"?workspaceId="+wsID, nil, token)
 	assert.Equal(t, http.StatusNoContent, delResp.Code)
 }
 
 func TestCollectionRoutes_DeleteRequest_NotFound(t *testing.T) {
-	router, token := collectionTestDeps(t)
+	router, token, wsID := collectionTestDeps(t)
 
-	resp := performJSON(router, http.MethodDelete, "/v1/collections/requests/nonexistent", nil, token)
+	resp := performJSON(router, http.MethodDelete, "/v1/collections/requests/nonexistent?workspaceId="+wsID, nil, token)
 	assert.Equal(t, http.StatusNotFound, resp.Code)
 }

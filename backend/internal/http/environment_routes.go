@@ -8,10 +8,12 @@ import (
 
 	"vue-api/backend/internal/auth"
 	"vue-api/backend/internal/environment"
+	"vue-api/backend/internal/workspace"
 )
 
 type EnvironmentRouteDeps struct {
 	Environments environment.Repository
+	Memberships  workspace.MembershipRepository
 	Users        auth.UserRepository
 	Tokens       auth.TokenManager
 }
@@ -101,11 +103,18 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 
 	g.PUT("/:id", func(c echo.Context) error {
 		var req struct {
-			Name       *string `json:"name"`
-			Visibility *string `json:"visibility"`
+			WorkspaceID string  `json:"workspaceId"`
+			Name        *string `json:"name"`
+			Visibility  *string `json:"visibility"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		}
+		if req.WorkspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
+		}
+		if !hasWorkspaceRole(c, deps.Memberships, req.WorkspaceID, "tester") {
+			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
 		}
 
 		env, err := deps.Environments.UpdateEnvironment(c.Request().Context(), c.Param("id"), environment.UpdateEnvironmentParams{
@@ -127,6 +136,14 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 	})
 
 	g.DELETE("/:id", func(c echo.Context) error {
+		workspaceID := c.QueryParam("workspaceId")
+		if workspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
+		}
+		if !hasWorkspaceRole(c, deps.Memberships, workspaceID, "tester") {
+			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		}
+
 		if err := deps.Environments.DeleteEnvironment(c.Request().Context(), c.Param("id")); err != nil {
 			if errors.Is(err, environment.ErrEnvironmentNotFound) {
 				return echo.NewHTTPError(http.StatusNotFound, "Environment not found")
@@ -139,12 +156,19 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 
 	g.POST("/:envId/variables", func(c echo.Context) error {
 		var req struct {
-			Key    string `json:"key"`
-			Value  string `json:"value"`
-			Secret bool   `json:"secret"`
+			WorkspaceID string `json:"workspaceId"`
+			Key         string `json:"key"`
+			Value       string `json:"value"`
+			Secret      bool   `json:"secret"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		}
+		if req.WorkspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
+		}
+		if !hasWorkspaceRole(c, deps.Memberships, req.WorkspaceID, "tester") {
+			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
 		}
 		if req.Key == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "key is required")
@@ -176,12 +200,19 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 
 	g.PUT("/:envId/variables/:id", func(c echo.Context) error {
 		var req struct {
-			Key    *string `json:"key"`
-			Value  *string `json:"value"`
-			Secret *bool   `json:"secret"`
+			WorkspaceID string  `json:"workspaceId"`
+			Key         *string `json:"key"`
+			Value       *string `json:"value"`
+			Secret      *bool   `json:"secret"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		}
+		if req.WorkspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
+		}
+		if !hasWorkspaceRole(c, deps.Memberships, req.WorkspaceID, "tester") {
+			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
 		}
 
 		v, err := deps.Environments.UpdateVariable(c.Request().Context(), c.Param("id"), environment.UpdateVariableParams{
@@ -205,6 +236,14 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 	})
 
 	g.DELETE("/:envId/variables/:id", func(c echo.Context) error {
+		workspaceID := c.QueryParam("workspaceId")
+		if workspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
+		}
+		if !hasWorkspaceRole(c, deps.Memberships, workspaceID, "tester") {
+			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		}
+
 		if err := deps.Environments.DeleteVariable(c.Request().Context(), c.Param("id")); err != nil {
 			if errors.Is(err, environment.ErrVariableNotFound) {
 				return echo.NewHTTPError(http.StatusNotFound, "Variable not found")

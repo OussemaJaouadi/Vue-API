@@ -131,11 +131,13 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 	})
 	apihttp.RegisterCollectionRoutes(router, apihttp.CollectionRouteDeps{
 		Collections: collections,
+		Memberships: membershipRepo,
 		Users:       users,
 		Tokens:      tokens,
 	})
 	apihttp.RegisterEnvironmentRoutes(router, apihttp.EnvironmentRouteDeps{
 		Environments: environments,
+		Memberships:  membershipRepo,
 		Users:        users,
 		Tokens:       tokens,
 	})
