@@ -144,10 +144,10 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
       </div>
       
       <div class="flex items-center gap-1">
-        <button @click="workbench.addRequest()" class="p-1.5 text-muted-foreground/80 hover:text-primary transition-all hover:bg-primary/5 active:scale-95" title="New Request">
+        <button @click="workbench.addRequest()" class="p-1.5 text-muted-foreground/80 hover:text-primary transition-all hover:bg-primary/5 active:translate-x-0.5 active:translate-y-0.5" title="New Request">
           <PhFilePlus class="size-4" />
         </button>
-        <button @click="workbench.addFolder()" class="p-1.5 text-muted-foreground/80 hover:text-primary transition-all hover:bg-primary/5 active:scale-95" title="New Collection">
+        <button @click="workbench.addFolder()" class="p-1.5 text-muted-foreground/80 hover:text-primary transition-all hover:bg-primary/5 active:translate-x-0.5 active:translate-y-0.5" title="New Collection">
           <PhFolderPlus class="size-4" />
         </button>
       </div>
@@ -213,7 +213,7 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
           @drop="handleDrop($event, group.name, 0, 'inside')"
         >
           <div class="flex size-6 items-center justify-center">
-            <component :is="expandedFolders[group.name] ? PhCaretDown : PhCaretRight" class="size-3 transition-colors" :class="expandedFolders[group.name] ? 'text-primary' : 'text-muted-foreground/30'" />
+            <component :is="expandedFolders[group.name] ? PhCaretDown : PhCaretRight" class="size-3 transition-colors" :class="expandedFolders[group.name] ? 'text-primary' : 'text-muted-foreground/60'" />
           </div>
           
           <div class="grid size-6 place-items-center border-2 transition-colors" :class="expandedFolders[group.name] ? 'border-primary/20 bg-primary/5 text-primary' : 'border-border/60 bg-muted/10 text-muted-foreground/80'">

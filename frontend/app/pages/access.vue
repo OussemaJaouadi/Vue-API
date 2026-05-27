@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { AccessLevel } from '~/types/access'
 import AccessHeader from '~/components/access/AccessHeader.vue'
 import AccessUserRoster from '~/components/access/AccessUserRoster.vue'
 import AccessGrantEditor from '~/components/access/AccessGrantEditor.vue'
@@ -26,7 +27,7 @@ const roleOptions = [
   { value: 'tester', label: 'Tester' },
 ]
 
-const accessOptions = [
+const accessOptions: { value: AccessLevel; label: string }[] = [
   { value: 'none', label: 'Denied' },
   { value: 'read', label: 'Read' },
   { value: 'write', label: 'Write' },

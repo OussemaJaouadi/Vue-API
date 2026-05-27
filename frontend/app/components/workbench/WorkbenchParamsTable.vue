@@ -87,7 +87,7 @@ onMounted(() => {
         :key="param.id"
         class="group relative grid min-h-10 grid-cols-[36px_42px_minmax(120px,1fr)_minmax(120px,1.3fr)_36px] items-stretch border-b transition-colors"
         :class="[
-          param.enabled ? 'bg-background hover:bg-primary/[0.03]' : 'bg-muted/10 text-muted-foreground/40 hover:bg-muted/20',
+          param.enabled ? 'bg-background hover:bg-primary/[0.03]' : 'bg-muted/10 text-muted-foreground/65 hover:bg-muted/20',
           draggedParamId === param.id && 'opacity-35',
         ]"
         :draggable="!isGhostParam(param, index)"
@@ -126,7 +126,7 @@ onMounted(() => {
         <div class="flex items-center border-r border-border/5">
           <input
             v-model="param.key"
-            class="h-full w-full bg-transparent px-4 font-mono text-[11px] font-black uppercase tracking-tight outline-none placeholder:text-muted-foreground/20"
+            class="h-full w-full bg-transparent px-4 font-mono text-[11px] font-black uppercase tracking-tight outline-none placeholder:text-muted-foreground/50"
             placeholder="Parameter Key"
           >
         </div>
@@ -134,7 +134,7 @@ onMounted(() => {
         <div class="flex items-center border-r border-border/5">
           <input
             v-model="param.value"
-            class="h-full w-full bg-transparent px-4 font-mono text-[11px] font-bold outline-none placeholder:text-muted-foreground/20"
+            class="h-full w-full bg-transparent px-4 font-mono text-[11px] font-bold outline-none placeholder:text-muted-foreground/50"
             placeholder="Value"
           >
         </div>

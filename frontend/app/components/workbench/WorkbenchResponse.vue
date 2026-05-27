@@ -46,7 +46,7 @@ watch(
     <div class="flex h-10 shrink-0 items-center justify-between border-b bg-muted/30 px-4">
       <div class="flex items-center gap-3">
         <div class="flex items-center gap-2 border-2 px-2 py-0.5 font-mono text-[9px] font-black uppercase transition-all"
-          :class="workbench.webSocketState.value === 'connected' ? 'border-primary/30 bg-primary/5 text-primary' : 'border-border/60 text-muted-foreground/40'"
+          :class="workbench.webSocketState.value === 'connected' ? 'border-primary/30 bg-primary/5 text-primary' : 'border-border/60 text-muted-foreground/65'"
         >
           {{ workbench.webSocketState.value }}
         </div>
@@ -66,7 +66,7 @@ watch(
         :key="event.id"
         class="group grid grid-cols-[80px_80px_minmax(0,1fr)_80px] items-start border bg-background transition-all hover:border-primary/30 hover:shadow-sm"
       >
-        <span class="border-r border-border/10 px-3 py-2.5 font-mono text-[10px] font-bold text-muted-foreground/40">{{ event.timestamp }}</span>
+        <span class="border-r border-border/10 px-3 py-2.5 font-mono text-[10px] font-bold text-muted-foreground/65">{{ event.timestamp }}</span>
         <span
           class="border-r border-border/10 px-3 py-2.5 font-mono text-[10px] font-black uppercase tracking-tighter"
           :class="{
@@ -82,12 +82,12 @@ watch(
           <span class="block truncate font-mono text-[11px] font-black uppercase tracking-tight text-foreground/80 group-hover:text-foreground">{{ event.title }}</span>
           <span v-if="event.payload" class="mt-1 block truncate font-mono text-[10px] text-muted-foreground/60">{{ event.payload }}</span>
         </div>
-        <span class="px-3 py-2.5 text-right font-mono text-[10px] font-black text-muted-foreground/30">
+        <span class="px-3 py-2.5 text-right font-mono text-[10px] font-black text-muted-foreground/60">
           {{ event.sizeBytes ? `${event.sizeBytes} B` : '-' }}
         </span>
       </div>
 
-      <div v-if="workbench.webSocketEvents.value.length === 0" class="flex h-32 items-center justify-center font-mono text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/10 italic">
+      <div v-if="workbench.webSocketEvents.value.length === 0" class="flex h-32 items-center justify-center font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground/65 italic">
         Awaiting Initial Handshake
       </div>
     </div>
@@ -115,7 +115,7 @@ watch(
         </div>
       </div>
 
-      <div class="flex items-center gap-6 font-mono text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/40">
+      <div class="flex items-center gap-6 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground/65">
         <div class="hidden items-center gap-2 lg:flex">
           <PhDatabase class="size-3" />
           <span class="text-foreground/40">{{ workbench.responseData.value.executionTarget }}</span>
@@ -188,7 +188,7 @@ watch(
         <PhCode class="size-full text-primary opacity-5" />
         <div class="absolute inset-0 animate-pulse border-2 border-dashed border-primary/20" />
       </div>
-      <p class="font-mono text-[11px] font-black uppercase tracking-[0.25em] text-muted-foreground/30">
+      <p class="font-mono text-[11px] font-black uppercase tracking-widest text-muted-foreground/60">
         Terminal Idle / Awaiting Frame
       </p>
     </div>

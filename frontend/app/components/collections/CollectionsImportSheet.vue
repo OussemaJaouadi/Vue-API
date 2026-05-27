@@ -129,7 +129,7 @@ const statusColor = computed(() => {
           <div class="grid size-16 mx-auto place-items-center border-2 border-dashed border-border/60 bg-muted/5 text-muted-foreground/20">
             <PhUploadSimple class="size-8" />
           </div>
-          <p class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 leading-relaxed">
+          <p class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground/65 leading-relaxed">
             Select a JSON or YAML file to begin the validation process
           </p>
         </div>

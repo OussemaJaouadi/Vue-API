@@ -125,7 +125,7 @@ const previewRows = computed(() => {
         <div class="flex items-center gap-3">
           <input
             v-model="bearerToken"
-            class="h-11 flex-1 border-2 border-primary/10 bg-background/50 px-4 font-mono text-sm font-bold outline-none transition-all placeholder:text-muted-foreground/20 hover:border-primary/30 focus:border-primary"
+            class="h-11 flex-1 border-2 border-primary/10 bg-background/50 px-4 font-mono text-sm font-bold outline-none transition-all placeholder:text-muted-foreground/50 hover:border-primary/30 focus:border-primary"
             placeholder="{{accessToken}}"
             spellcheck="false"
           >
@@ -171,7 +171,7 @@ const previewRows = computed(() => {
       </div>
 
       <div v-else class="py-12 text-center">
-        <p class="font-mono text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/20 italic">
+        <p class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground/20 italic">
           {{ authMode === 'inherit' ? 'Inheriting from parent authority' : 'Protocol selection pending' }}
         </p>
       </div>

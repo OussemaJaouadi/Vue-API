@@ -97,7 +97,7 @@ const fullUrl = computed({
         </div>
         <input
           v-model="fullUrl"
-          class="h-full w-full min-w-0 bg-transparent font-mono text-[13px] font-bold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/20"
+          class="h-full w-full min-w-0 bg-transparent font-mono text-[11px] font-bold tracking-tight text-foreground outline-none placeholder:text-muted-foreground/50"
           placeholder="Path or qualified endpoint..."
           spellcheck="false"
         >
@@ -109,7 +109,7 @@ const fullUrl = computed({
       <div class="flex items-center px-4 gap-3">
         <UiTooltip>
           <UiTooltipTrigger as-child>
-            <button class="group flex size-8 items-center justify-center border-2 border-primary/10 bg-background transition-all hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-primary active:scale-95">
+            <button class="group flex size-8 items-center justify-center border-2 border-primary/10 bg-background transition-all hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-primary active:translate-x-0.5 active:translate-y-0.5 active:shadow-none">
               <PhFloppyDisk class="size-4" />
             </button>
           </UiTooltipTrigger>
@@ -124,7 +124,7 @@ const fullUrl = computed({
       type="button"
       @click="workbench.executeActiveRequest"
     >
-      <div class="flex items-center gap-3 font-mono text-[11px] font-black uppercase tracking-[0.2em]">
+      <div class="flex items-center gap-3 font-mono text-[11px] font-black uppercase tracking-widest">
         <PhCircleNotch v-if="workbench.loading.value" class="size-4 animate-spin" />
         <PhPaperPlaneTilt v-else class="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
         {{ workbench.isWebSocketRequest.value ? (workbench.webSocketState.value === 'connected' ? 'Kill' : 'Init') : 'Send' }}

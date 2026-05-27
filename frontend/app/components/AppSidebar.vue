@@ -174,7 +174,7 @@ onBeforeUnmount(() => {
               <component 
                 :is="item.icon" 
                 class="size-4.5 shrink-0 transition-transform group-hover:scale-110" 
-                :class="[!collapsed && 'mr-3', route.path === item.to ? 'text-primary' : 'text-muted-foreground/40']"
+                :class="[!collapsed && 'mr-3', route.path === item.to ? 'text-primary' : 'text-muted-foreground/65']"
               />
               <span v-if="!collapsed" class="truncate text-[10px] font-bold uppercase tracking-widest">{{ item.label }}</span>
 
@@ -209,7 +209,7 @@ onBeforeUnmount(() => {
             <span v-if="!collapsed" class="truncate font-mono text-[9px] font-black uppercase tracking-[0.2em]">
               Theme
             </span>
-            <span v-if="!collapsed" class="ml-auto font-mono text-[8px] font-black uppercase tracking-widest text-muted-foreground/55">
+            <span v-if="!collapsed" class="ml-auto font-mono text-[8px] font-black uppercase tracking-widest text-muted-foreground/70">
               {{ activeThemeItem.label }}
             </span>
           </button>

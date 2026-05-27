@@ -7,7 +7,7 @@ const workbench = useWorkbench()
 </script>
 
 <template>
-  <div class="flex h-[calc(100dvh-3.5rem)] min-h-37.5 flex-row overflow-hidden">
+  <div class="flex h-[calc(100dvh-5.5rem)] border bg-card overflow-hidden">
     <WorkbenchSidebar :style="{ width: `${workbench.sidebarWidth.value}px` }" />
 
     <WorkbenchResizer

@@ -12,7 +12,7 @@ const toggleLayout = () => {
 </script>
 
 <template>
-  <div class="flex flex-1 flex-col overflow-hidden bg-background select-none">
+  <div class="flex flex-1 flex-col overflow-hidden select-none">
     <!-- Tab Bar + Layout Toggle -->
     <div class="flex h-10 items-center justify-between border-b bg-muted/30">
       <WorkbenchTabBar class="h-full border-b-0" />
@@ -21,7 +21,7 @@ const toggleLayout = () => {
         <UiTooltip>
           <UiTooltipTrigger as-child>
             <button 
-              class="group grid size-7 place-items-center border-2 border-primary/10 bg-background transition-all hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-primary active:scale-95 shadow-sm"
+              class="group grid size-7 place-items-center border-2 border-primary/10 bg-background transition-all hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-primary active:translate-x-0.5 active:translate-y-0.5 active:shadow-none shadow-sm"
               @click="toggleLayout"
             >
               <component 
@@ -40,7 +40,7 @@ const toggleLayout = () => {
 
     <!-- Dynamic Layout Engine -->
     <div 
-      class="flex flex-1 min-h-0 overflow-hidden bg-card/5"
+      class="flex flex-1 min-h-0 overflow-hidden"
       :class="workbench.responsePosition.value === 'bottom' ? 'flex-col' : 'flex-row'"
     >
       <!-- Request Panel (The Workspace) -->
@@ -70,7 +70,7 @@ const toggleLayout = () => {
 
       <!-- Response Inspector (The Terminal) -->
       <section
-        class="min-h-35 min-w-75 overflow-hidden bg-background"
+        class="min-h-35 min-w-75 overflow-hidden"
         :class="workbench.responsePosition.value === 'bottom' ? 'flex-1' : 'shrink-0 shadow-[-4px_0_12px_rgba(0,0,0,0.05)]'"
         :style="workbench.responsePosition.value === 'right' ? { width: `${workbench.responseWidth.value}px` } : {}"
       >

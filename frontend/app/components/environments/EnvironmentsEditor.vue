@@ -80,7 +80,7 @@ defineEmits<{
             </td>
           </tr>
           <tr v-if="variables.length === 0">
-            <td colspan="3" class="h-48 text-center font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground/15 italic">
+            <td colspan="3" class="h-48 text-center font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 italic">
               No parameters configured for this node
             </td>
           </tr>

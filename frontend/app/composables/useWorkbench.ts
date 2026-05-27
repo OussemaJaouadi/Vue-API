@@ -199,7 +199,6 @@ export function useWorkbench() {
         direction: 'system',
         title: 'Connected through backend proxy',
         payload: `Target: ${data.target}`,
-        timestamp: data.timestamp,
       })
     } else if (event.type === 'ws.message.in' || event.type === 'ws.message.in.binary') {
       appendWebSocketEvent({
@@ -207,16 +206,13 @@ export function useWorkbench() {
         title: event.type === 'ws.message.in' ? 'Message received' : 'Binary message received',
         payload: data.payload,
         sizeBytes: data.sizeBytes,
-        timestamp: data.timestamp,
       })
     } else if (event.type === 'ws.message.out') {
-      // We already append on send, but this confirms it reached the backend
     } else if (event.type === 'ws.error') {
       appendWebSocketEvent({
         direction: 'error',
         title: 'WebSocket Error',
         payload: data.error,
-        timestamp: data.timestamp,
       })
     } else if (event.type === 'ws.closed') {
       webSocketState.value = 'closed'
@@ -224,7 +220,6 @@ export function useWorkbench() {
       appendWebSocketEvent({
         direction: 'system',
         title: 'Socket closed',
-        timestamp: data.timestamp,
       })
     }
   })
@@ -369,9 +364,8 @@ export function useWorkbench() {
         status: 0,
         statusText: 'Error',
         duration: 0,
-        size: '0',
+        size: 0,
         ttfb: 0,
-        decoded: '',
         executionTarget: '',
         requestId: '',
         headers: [],
@@ -382,7 +376,7 @@ export function useWorkbench() {
     }
   }
 
-  const appendWebSocketEvent = (event: Omit<WebSocketTimelineEvent, 'id'>) => {
+  const appendWebSocketEvent = (event: Omit<WebSocketTimelineEvent, 'id' | 'timestamp'>) => {
     webSocketEvents.value.unshift({
       id: crypto.randomUUID(),
       timestamp: new Date().toLocaleTimeString('en-GB', { hour12: false }),
@@ -503,6 +497,15 @@ export function useWorkbench() {
     headers.value = headers.value.filter(header => header.id !== id)
   }
 
+  const moveHeader = (id: string, toIndex: number) => {
+    const fromIndex = headers.value.findIndex(h => h.id === id)
+    if (fromIndex === -1) return
+    const item = headers.value[fromIndex]
+    if (!item) return
+    headers.value.splice(fromIndex, 1)
+    headers.value.splice(toIndex, 0, item)
+  }
+
   return {
     treeItems,
     rootRequests,
@@ -538,6 +541,7 @@ export function useWorkbench() {
     moveQueryParam,
     addHeader,
     removeHeader,
+    moveHeader,
     addFolder,
     addRequest,
     moveRequest,

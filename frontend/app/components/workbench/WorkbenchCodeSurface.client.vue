@@ -309,7 +309,7 @@ onBeforeUnmount(destroyEditor)
         </div>
         <div class="min-w-0">
           <span class="block font-mono text-[10px] font-black uppercase tracking-widest text-foreground/80 leading-none">{{ label }}</span>
-          <span class="mt-1 block font-mono text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-none">Code Surface / AST View</span>
+          <span class="mt-1 block font-mono text-[8px] font-bold uppercase tracking-widest text-muted-foreground/65 leading-none">Code Surface / AST View</span>
         </div>
       </div>
 
@@ -318,7 +318,7 @@ onBeforeUnmount(destroyEditor)
           <UiTooltip>
             <UiTooltipTrigger as-child>
               <button
-                class="flex h-6 items-center gap-1.5 border-2 border-primary/10 bg-background px-2 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:border-primary/40 hover:text-primary active:scale-95"
+                class="flex h-6 items-center gap-1.5 border-2 border-primary/10 bg-background px-2 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:border-primary/40 hover:text-primary active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                 type="button"
                 @click="formatJson"
               >
@@ -332,7 +332,7 @@ onBeforeUnmount(destroyEditor)
           <UiTooltip>
             <UiTooltipTrigger as-child>
               <button
-                class="flex h-6 items-center border-2 border-primary/10 bg-background px-2 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:border-primary/40 hover:text-primary active:scale-95"
+                class="flex h-6 items-center border-2 border-primary/10 bg-background px-2 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:border-primary/40 hover:text-primary active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
                 type="button"
                 @click="minifyJson"
               >
@@ -346,7 +346,7 @@ onBeforeUnmount(destroyEditor)
         <UiTooltip>
           <UiTooltipTrigger as-child>
             <button
-              class="grid size-6 place-items-center border-2 border-primary/10 bg-background text-muted-foreground transition-all hover:border-primary/40 hover:text-primary active:scale-95"
+              class="grid size-6 place-items-center border-2 border-primary/10 bg-background text-muted-foreground transition-all hover:border-primary/40 hover:text-primary active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
               type="button"
               @click="copyCode"
             >
@@ -360,7 +360,7 @@ onBeforeUnmount(destroyEditor)
         <UiDropdownMenu>
           <UiDropdownMenuTrigger as-child>
             <button
-              class="flex h-6 items-center gap-2 border-2 border-primary/20 bg-primary/5 px-2 font-mono text-[9px] font-black uppercase tracking-widest text-primary transition-all hover:border-primary/50 active:scale-95 outline-none"
+              class="flex h-6 items-center gap-2 border-2 border-primary/20 bg-primary/5 px-2 font-mono text-[9px] font-black uppercase tracking-widest text-primary transition-all hover:border-primary/50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none outline-none"
               type="button"
             >
               {{ language }}

@@ -33,25 +33,25 @@ const addActiveItem = () => {
         <UiTabsList class="h-full gap-0 bg-transparent p-0">
           <UiTabsTrigger value="params" class="group relative h-full flex-none rounded-none border-x border-transparent px-4 font-mono text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-primary transition-all duration-200" @click="activeTab = 'params'">
             <div class="flex items-center gap-2">
-              <PhSlidersHorizontal class="size-3.5 transition-colors" :class="activeTab === 'params' ? 'text-primary' : 'text-muted-foreground/40 group-hover:text-primary/60'" />
+              <PhSlidersHorizontal class="size-3.5 transition-colors" :class="activeTab === 'params' ? 'text-primary' : 'text-muted-foreground/65 group-hover:text-primary/60'" />
               Params
-              <span class="font-mono text-[9px] text-muted-foreground/30">{{ activeParamCount }}</span>
+              <span class="font-mono text-[9px] text-muted-foreground/60">{{ activeParamCount }}</span>
             </div>
             <div v-if="activeTab === 'params'" class="absolute bottom-0 left-0 h-0.75 w-full bg-primary" />
           </UiTabsTrigger>
 
           <UiTabsTrigger value="headers" class="group relative h-full flex-none rounded-none border-x border-transparent px-4 font-mono text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-primary transition-all duration-200" @click="activeTab = 'headers'">
             <div class="flex items-center gap-2">
-              <PhListChecks class="size-3.5 transition-colors" :class="activeTab === 'headers' ? 'text-primary' : 'text-muted-foreground/40 group-hover:text-primary/60'" />
+              <PhListChecks class="size-3.5 transition-colors" :class="activeTab === 'headers' ? 'text-primary' : 'text-muted-foreground/65 group-hover:text-primary/60'" />
               Headers
-              <span class="font-mono text-[9px] text-muted-foreground/30">{{ activeHeaderCount }}</span>
+              <span class="font-mono text-[9px] text-muted-foreground/60">{{ activeHeaderCount }}</span>
             </div>
             <div v-if="activeTab === 'headers'" class="absolute bottom-0 left-0 h-0.75 w-full bg-primary" />
           </UiTabsTrigger>
 
           <UiTabsTrigger value="body" class="group relative h-full flex-none rounded-none border-x border-transparent px-4 font-mono text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-background data-[state=active]:text-primary transition-all duration-200" @click="activeTab = 'body'">
             <div class="flex items-center gap-2">
-              <PhKey class="size-3.5 transition-colors" :class="activeTab === 'body' ? 'text-primary' : 'text-muted-foreground/40 group-hover:text-primary/60'" />
+              <PhKey class="size-3.5 transition-colors" :class="activeTab === 'body' ? 'text-primary' : 'text-muted-foreground/65 group-hover:text-primary/60'" />
               {{ bodyLabel }}
             </div>
             <div v-if="activeTab === 'body'" class="absolute bottom-0 left-0 h-0.75 w-full bg-primary" />
@@ -66,7 +66,7 @@ const addActiveItem = () => {
                 :class="authMode === 'none' ? 'text-muted-foreground hover:bg-muted/40 hover:text-foreground' : 'text-primary bg-primary/[0.03]'"
                 type="button"
               >
-                <PhShieldCheck class="size-3.5 transition-colors" :class="authMode !== 'none' ? 'text-primary' : 'text-muted-foreground/40 group-hover:text-primary/60'" />
+                <PhShieldCheck class="size-3.5 transition-colors" :class="authMode !== 'none' ? 'text-primary' : 'text-muted-foreground/65 group-hover:text-primary/60'" />
                 Auth
                 <span class="font-mono text-[9px] opacity-30">
                   {{ authMode === 'none' ? 'Empty' : authMode }}

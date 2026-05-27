@@ -18,7 +18,7 @@ const workbench = useWorkbench()
         :class="workbench.activeRequestId.value === tab.id ? 'bg-background text-primary' : 'bg-muted/10 text-muted-foreground hover:bg-muted/35 hover:text-foreground'"
         @click="workbench.activeRequestId.value = tab.id"
       >
-        <div v-if="workbench.activeRequestId.value === tab.id" class="absolute bottom-0 left-0 h-0.75 w-full bg-primary shadow-[0_-2px_8px_rgba(16,185,129,0.35)]" />
+        <div v-if="workbench.activeRequestId.value === tab.id" class="absolute bottom-0 left-0 h-0.75 w-full bg-primary" />
         
         <div class="flex min-w-0 items-center gap-2">
           <div 
@@ -50,9 +50,9 @@ const workbench = useWorkbench()
 
     <!-- Right Side Global Context -->
     <div class="flex h-full shrink-0 items-center gap-2 border-l bg-muted/5 px-3">
-      <div class="flex items-center gap-2 px-2 py-1 border-2 border-indigo-500/10 bg-indigo-500/5 transition-all hover:border-indigo-500/30">
-        <PhTerminalWindow class="size-3.5 text-indigo-500" />
-        <span class="font-mono text-[9px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Localhost:8080</span>
+      <div class="flex items-center gap-2 px-2 py-1 border-2 border-primary/10 bg-primary/5 transition-all hover:border-primary/30">
+        <PhTerminalWindow class="size-3.5 text-primary" />
+        <span class="font-mono text-[9px] font-black uppercase tracking-widest text-primary/80">Localhost:8080</span>
       </div>
     </div>
   </nav>
