@@ -77,6 +77,9 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 	}
 	logBootstrapResult(logger, bootstrapResult)
 
+	collections := gormstorage.NewCollectionRepository(db)
+	environments := gormstorage.NewEnvironmentRepository(db)
+
 	eventDeps := apihttp.NewEventDeps(users, tokens)
 
 	executionService := execution.NewService()
@@ -93,6 +96,16 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 		RefreshCookieSecure: cfg.Auth.RefreshCookieSecure,
 	})
 	apihttp.RegisterEventRoutes(router, eventDeps)
+	apihttp.RegisterCollectionRoutes(router, apihttp.CollectionRouteDeps{
+		Collections: collections,
+		Users:       users,
+		Tokens:      tokens,
+	})
+	apihttp.RegisterEnvironmentRoutes(router, apihttp.EnvironmentRouteDeps{
+		Environments: environments,
+		Users:        users,
+		Tokens:       tokens,
+	})
 	apihttp.RegisterExecutionRoutes(router, apihttp.ExecutionRouteDeps{
 		Execution: executionService,
 		WS:        wsManager,
