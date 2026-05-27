@@ -41,6 +41,7 @@ type CreateUserParams struct {
 }
 
 type UserRepository interface {
+	ListUsers(ctx context.Context) ([]User, error)
 	CountUsers(ctx context.Context) (int, error)
 	CreateUser(ctx context.Context, params CreateUserParams) (User, error)
 	FindUserByEmail(ctx context.Context, email string) (User, error)
@@ -69,6 +70,17 @@ func (repo *MemoryUserRepository) CountUsers(ctx context.Context) (int, error) {
 	defer repo.mu.RUnlock()
 
 	return len(repo.users), nil
+}
+
+func (repo *MemoryUserRepository) ListUsers(ctx context.Context) ([]User, error) {
+	repo.mu.RLock()
+	defer repo.mu.RUnlock()
+
+	users := make([]User, 0, len(repo.users))
+	for _, u := range repo.users {
+		users = append(users, u)
+	}
+	return users, nil
 }
 
 func (repo *MemoryUserRepository) CreateUser(ctx context.Context, params CreateUserParams) (User, error) {

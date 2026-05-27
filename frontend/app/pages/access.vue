@@ -8,6 +8,7 @@ import AccessInviteSheet from '~/components/access/AccessInviteSheet.vue'
 
 const {
   users,
+  usersLoading,
   selectedUserId,
   selectedUser,
   grantSections,
@@ -40,6 +41,11 @@ const accessOptions: { value: AccessLevel; label: string }[] = [
     <AccessHeader @invite="inviteOpen = true" />
 
     <div class="flex-1 flex min-w-0 gap-3 overflow-x-auto p-3 bg-muted/5">
+      <div v-if="usersLoading" class="flex-1 grid place-items-center">
+        <span class="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">Loading users...</span>
+      </div>
+
+      <template v-else>
       <AccessUserRoster
         :users="users"
         :selected-user-id="selectedUserId"
@@ -70,6 +76,7 @@ const accessOptions: { value: AccessLevel; label: string }[] = [
         @resolve-denied="resolveDenied"
         class="h-full"
       />
+      </template>
     </div>
 
     <AccessInviteSheet

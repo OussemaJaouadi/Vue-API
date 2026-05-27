@@ -28,6 +28,20 @@ func (repo *UserRepository) CountUsers(ctx context.Context) (int, error) {
 	return int(count), nil
 }
 
+func (repo *UserRepository) ListUsers(ctx context.Context) ([]auth.User, error) {
+	var models []UserModel
+	if err := repo.db.WithContext(ctx).Order("created_at ASC").Find(&models).Error; err != nil {
+		return nil, err
+	}
+
+	users := make([]auth.User, 0, len(models))
+	for _, m := range models {
+		users = append(users, toAuthUser(m))
+	}
+
+	return users, nil
+}
+
 func (repo *UserRepository) CreateUser(ctx context.Context, params auth.CreateUserParams) (auth.User, error) {
 	model := UserModel{
 		ID:           id.NewUUIDV7(),

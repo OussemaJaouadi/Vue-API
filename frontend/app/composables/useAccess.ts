@@ -1,36 +1,6 @@
 import { PhDatabase, PhFolderOpen, PhKey } from '@phosphor-icons/vue'
 import type { AccessLevel, AccessUser, GrantTarget } from '~/types/access'
 
-const defaultUsers: AccessUser[] = [
-  {
-    id: 'oussema_admin',
-    username: 'oussema_admin',
-    email: 'oussema@test.io',
-    role: 'manager',
-    status: 'active',
-    inheritedFrom: 'workspace manager',
-    grants: { collections: {}, environments: {}, secrets: {} },
-  },
-  {
-    id: 'nora_dev',
-    username: 'nora_dev',
-    email: 'nora@example.com',
-    role: 'developer',
-    status: 'active',
-    inheritedFrom: 'project developer',
-    grants: { collections: {}, environments: {}, secrets: {} },
-  },
-  {
-    id: 'qa_tester',
-    username: 'qa_tester',
-    email: 'qa@example.com',
-    role: 'tester',
-    status: 'pending',
-    inheritedFrom: 'manual invite',
-    grants: { collections: {}, environments: {}, secrets: {} },
-  },
-]
-
 const accessWeight: Record<AccessLevel, number> = {
   none: 0,
   read: 1,
@@ -39,12 +9,42 @@ const accessWeight: Record<AccessLevel, number> = {
 }
 
 export function useAccess() {
+  const { get } = useApiClient()
   const workbench = useWorkbench()
   const { environments } = useEnvironments()
 
-  const users = useState<AccessUser[]>('access:users', () => defaultUsers)
-  const selectedUserId = useState<string>('access:selected-user', () => defaultUsers[0]!.id)
-  const selectedUser = computed(() => users.value.find(user => user.id === selectedUserId.value) ?? users.value[0]!)
+  const users = useState<AccessUser[]>('access:users', () => [])
+  const usersLoading = useState<boolean>('access:loading', () => true)
+  const selectedUserId = useState<string>('access:selected-user', () => '')
+
+  const selectedUser = computed(() => users.value.find(user => user.id === selectedUserId.value) ?? users.value[0])
+
+  const loadUsers = async () => {
+    usersLoading.value = true
+    try {
+      const data = await get<any[]>('/v1/users')
+      users.value = data.map((u: any) => ({
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        role: u.role,
+        status: u.active ? 'active' : 'inactive',
+        inheritedFrom: '',
+        grants: { collections: {}, environments: {}, secrets: {} },
+      }))
+      if (data.length > 0 && !selectedUserId.value) {
+        selectedUserId.value = data[0].id
+      }
+    } catch (err) {
+      console.error('Failed to load users', err)
+    } finally {
+      usersLoading.value = false
+    }
+  }
+
+  if (usersLoading.value) {
+    loadUsers()
+  }
 
   const collectionEntries = computed(() =>
     workbench.treeItems.value.map(group => ({
@@ -166,6 +166,7 @@ export function useAccess() {
 
   return {
     users,
+    usersLoading,
     selectedUserId,
     selectedUser,
     grantSections,
@@ -176,5 +177,6 @@ export function useAccess() {
     updateGrant,
     resolveDenied,
     canExecute,
+    loadUsers,
   }
 }

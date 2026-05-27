@@ -96,6 +96,10 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 		RefreshCookieSecure: cfg.Auth.RefreshCookieSecure,
 	})
 	apihttp.RegisterEventRoutes(router, eventDeps)
+	apihttp.RegisterUserRoutes(router, apihttp.UserRouteDeps{
+		Users:  users,
+		Tokens: tokens,
+	})
 	apihttp.RegisterCollectionRoutes(router, apihttp.CollectionRouteDeps{
 		Collections: collections,
 		Users:       users,

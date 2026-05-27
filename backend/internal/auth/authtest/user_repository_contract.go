@@ -121,4 +121,37 @@ func RunUserRepositoryContract(t *testing.T, factory UserRepositoryFactory) {
 		_, err = repo.UpdateUsername(context.Background(), "missing", "new-name")
 		require.ErrorIs(t, err, auth.ErrUserNotFound)
 	})
+	t.Run("lists all users", func(t *testing.T) {
+		repo := factory(t)
+
+		users, err := repo.ListUsers(context.Background())
+		require.NoError(t, err)
+		require.Empty(t, users)
+
+		_, err = repo.CreateUser(context.Background(), auth.CreateUserParams{
+			Email:        "alice@example.com",
+			Username:     "alice",
+			PasswordHash: "hash1",
+			GlobalRole:   auth.GlobalRoleManager,
+		})
+		require.NoError(t, err)
+
+		_, err = repo.CreateUser(context.Background(), auth.CreateUserParams{
+			Email:        "bob@example.com",
+			Username:     "bob",
+			PasswordHash: "hash2",
+			GlobalRole:   auth.GlobalRoleUser,
+		})
+		require.NoError(t, err)
+
+		users, err = repo.ListUsers(context.Background())
+		require.NoError(t, err)
+		require.Len(t, users, 2)
+		require.Equal(t, "alice@example.com", users[0].Email)
+		require.Equal(t, "bob@example.com", users[1].Email)
+
+		users, err = repo.ListUsers(context.Background())
+		require.NoError(t, err)
+		require.Len(t, users, 2)
+	})
 }
