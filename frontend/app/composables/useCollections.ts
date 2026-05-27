@@ -1,42 +1,24 @@
 export function useCollections() {
   const workbench = useWorkbench()
+  const { environments } = useEnvironments()
 
   const requestCount = computed(() => workbench.treeItems.value.reduce((count, group) => count + group.requests.length, workbench.rootRequests.value.length))
   const activeCollectionName = useState<string>('collections:active-collection', () => 'all')
   const expandedCollections = useState<Record<string, boolean>>('collections:expanded', () => ({
     all: true,
-    Authentication: true,
-    Realtime: true,
   }))
 
-  const collectionEnvironmentPolicies: Record<string, {
-    defaultEnvironment: string
-    allowedEnvironments: string[]
-    visibility: 'project' | 'restricted'
-    roles: string[]
-  }> = {
-    Authentication: {
-      defaultEnvironment: 'Local',
-      allowedEnvironments: ['Local', 'Staging'],
-      visibility: 'project',
+  const environmentPolicyFor = (name: string) => {
+    const envs = environments.value
+    const defaultEnv = envs.length > 0 ? envs[0].name : '—'
+    const allowed = envs.length > 0 ? envs.map((e: any) => e.name) : []
+    return {
+      defaultEnvironment: defaultEnv,
+      allowedEnvironments: allowed,
+      visibility: 'project' as const,
       roles: ['manager', 'developer'],
-    },
-    Realtime: {
-      defaultEnvironment: 'Local',
-      allowedEnvironments: ['Local'],
-      visibility: 'restricted',
-      roles: ['manager', 'developer'],
-    },
+    }
   }
-
-  const fallbackEnvironmentPolicy = {
-    defaultEnvironment: 'Local',
-    allowedEnvironments: ['Local'],
-    visibility: 'project' as const,
-    roles: ['manager', 'developer'],
-  }
-
-  const environmentPolicyFor = (name: string) => collectionEnvironmentPolicies[name] ?? fallbackEnvironmentPolicy
 
   const createWorkbenchExport = () => ({
     schema: 'vue-api-workbench.collection.v1',
