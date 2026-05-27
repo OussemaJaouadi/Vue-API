@@ -37,6 +37,8 @@ defineEmits<{
 
 const theme = useThemePreference()
 const route = useRoute()
+const { workspaces } = useWorkspace()
+const createModalOpen = ref(false)
 
 const healthLabel = computed(() => {
   if (props.healthStatus === 'ok') return 'Online'
@@ -147,6 +149,11 @@ onBeforeUnmount(() => {
           <UiTooltipContent side="right">{{ mobile ? 'Close navigation' : 'Collapse sidebar' }}</UiTooltipContent>
         </UiTooltip>
       </template>
+    </div>
+
+    <!-- Workspace Switcher -->
+    <div v-if="!collapsed && workspaces.length > 0" class="border-b border-border/30 px-3 py-2">
+      <WorkspaceSwitcher @create="createModalOpen = true" />
     </div>
 
     <!-- Navigation -->
@@ -338,4 +345,6 @@ onBeforeUnmount(() => {
 
     </div>
   </aside>
+
+  <WorkspaceCreateModal v-model:open="createModalOpen" />
 </template>
