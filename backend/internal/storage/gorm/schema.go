@@ -369,6 +369,39 @@ func expectedSchema() []expectedTable {
 			},
 		},
 		{
+			Name: "resource_grants",
+			CreateSQL: strings.Join([]string{
+				"CREATE TABLE resource_grants (",
+				"id text NOT NULL PRIMARY KEY,",
+				"workspace_id text NOT NULL,",
+				"user_id text NOT NULL,",
+				"resource_type text NOT NULL,",
+				"resource_id text NOT NULL,",
+				"access_level text NOT NULL,",
+				"created_at datetime NOT NULL,",
+				"updated_at datetime NOT NULL",
+				")",
+			}, " "),
+			Columns: []expectedColumn{
+				{Name: "id", Type: "text", NotNull: true, PrimaryKey: true, Definition: "id text NOT NULL PRIMARY KEY"},
+				{Name: "workspace_id", Type: "text", NotNull: true, Definition: "workspace_id text NOT NULL"},
+				{Name: "user_id", Type: "text", NotNull: true, Definition: "user_id text NOT NULL"},
+				{Name: "resource_type", Type: "text", NotNull: true, Definition: "resource_type text NOT NULL"},
+				{Name: "resource_id", Type: "text", NotNull: true, Definition: "resource_id text NOT NULL"},
+				{Name: "access_level", Type: "text", NotNull: true, Definition: "access_level text NOT NULL"},
+				{Name: "created_at", Type: "datetime", NotNull: true, Definition: "created_at datetime NOT NULL"},
+				{Name: "updated_at", Type: "datetime", NotNull: true, Definition: "updated_at datetime NOT NULL"},
+			},
+			Indexes: []expectedIndex{
+				{
+					Name:      "idx_resource_grants_workspace_user_resource",
+					Unique:    true,
+					Columns:   []string{"workspace_id", "user_id", "resource_type", "resource_id"},
+					CreateSQL: "CREATE UNIQUE INDEX idx_resource_grants_workspace_user_resource ON resource_grants(workspace_id, user_id, resource_type, resource_id)",
+				},
+			},
+		},
+		{
 			Name: "workspace_memberships",
 			CreateSQL: strings.Join([]string{
 				"CREATE TABLE workspace_memberships (",
