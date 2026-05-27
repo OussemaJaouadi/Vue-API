@@ -79,29 +79,29 @@ onBeforeUnmount(() => {
         <UiDropdownMenu>
           <UiDropdownMenuTrigger as-child>
             <button class="group flex items-center gap-1.5 border border-transparent px-2 py-1 transition-all hover:border-primary/20 hover:bg-primary/5 active:bg-primary/10">
-              <PhBuildings class="size-2.5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-              <span class="truncate opacity-40 group-hover:opacity-100 transition-opacity">{{ workspaceName }}</span>
-              <PhCaretDown class="size-2 opacity-20 group-hover:opacity-100" />
+              <PhBuildings class="size-2.5 text-muted-foreground/80 group-hover:text-primary transition-colors" />
+              <span class="truncate opacity-80 group-hover:opacity-100 transition-opacity">{{ workspaceName }}</span>
+              <PhCaretDown class="size-2 opacity-50 group-hover:opacity-100" />
             </button>
           </UiDropdownMenuTrigger>
           <UiDropdownMenuContent align="start" class="w-56 rounded-none border-2 p-1">
-             <UiDropdownMenuLabel class="text-[9px] font-black uppercase tracking-[0.2em] text-primary/40 p-2">Switch Workspace</UiDropdownMenuLabel>
+             <UiDropdownMenuLabel class="text-[9px] font-black uppercase tracking-[0.2em] text-primary/80 p-2">Switch Workspace</UiDropdownMenuLabel>
              <UiDropdownMenuItem class="rounded-none font-bold uppercase text-[10px]">{{ workspaceName }}</UiDropdownMenuItem>
           </UiDropdownMenuContent>
         </UiDropdownMenu>
 
-        <span class="text-border px-1 opacity-20">/</span>
+        <span class="text-border px-1 opacity-50">/</span>
 
         <UiDropdownMenu>
           <UiDropdownMenuTrigger as-child>
             <button class="group flex items-center gap-1.5 border border-transparent px-2 py-1 transition-all hover:border-primary/20 hover:bg-primary/5 active:bg-primary/10">
               <PhCube class="size-2.5 text-primary group-hover:scale-110 transition-transform" />
               <span class="truncate text-primary">{{ projectName }}</span>
-              <PhCaretDown class="size-2 opacity-20 group-hover:opacity-100 text-primary" />
+              <PhCaretDown class="size-2 opacity-50 group-hover:opacity-100 text-primary" />
             </button>
           </UiDropdownMenuTrigger>
           <UiDropdownMenuContent align="start" class="w-56 rounded-none border-2 p-1">
-             <UiDropdownMenuLabel class="text-[9px] font-black uppercase tracking-[0.2em] text-primary/40 p-2">Switch Project</UiDropdownMenuLabel>
+             <UiDropdownMenuLabel class="text-[9px] font-black uppercase tracking-[0.2em] text-primary/80 p-2">Switch Project</UiDropdownMenuLabel>
              <UiDropdownMenuItem class="rounded-none font-bold uppercase text-[10px]">{{ projectName }}</UiDropdownMenuItem>
           </UiDropdownMenuContent>
         </UiDropdownMenu>
@@ -110,12 +110,12 @@ onBeforeUnmount(() => {
 
     <!-- Center Command Palette -->
     <div class="hidden flex-1 justify-center lg:flex px-4">
-      <button class="group relative flex h-9 w-full max-w-md items-center justify-between gap-3 rounded-none border-2 border-primary/10 bg-muted/20 px-3 text-muted-foreground transition-all hover:border-primary/40 hover:bg-background hover:shadow-[4px_4px_0_0_rgba(16,185,129,0.2)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none">
+      <button class="group relative flex h-9 w-full max-w-md items-center justify-between gap-3 rounded-none border-2 border-indigo-500/15 bg-muted/20 px-3 text-muted-foreground transition-all hover:border-indigo-500/50 hover:bg-background hover:shadow-[4px_4px_0_0_rgba(99,102,241,0.22)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none">
         <div class="flex items-center gap-2">
-          <PhCommand class="size-3.5 group-hover:text-primary transition-colors" />
+          <PhCommand class="size-3.5 transition-colors group-hover:text-indigo-500" />
           <span class="font-mono text-[10px] font-bold uppercase tracking-[0.15em] group-hover:text-foreground transition-colors">Search Terminal...</span>
         </div>
-        <div class="flex items-center gap-1 rounded-none border-2 border-primary/10 bg-background px-1.5 py-0.5 font-mono text-[9px] font-black shadow-xs group-hover:border-primary/30">
+        <div class="flex items-center gap-1 rounded-none border-2 border-indigo-500/15 bg-background px-1.5 py-0.5 font-mono text-[9px] font-black shadow-xs transition-colors group-hover:border-indigo-500/40 group-hover:text-indigo-500">
           {{ shortcutHint }}
         </div>
       </button>
@@ -129,13 +129,13 @@ onBeforeUnmount(() => {
           <UiButton class="group h-9 rounded-none border-2 border-primary/20 bg-primary/3 px-3 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:border-primary/50 hover:bg-primary/10 hover:shadow-[3px_3px_0_0_rgba(16,185,129,0.1)]" variant="ghost">
             <PhTerminalWindow class="mr-2 size-3.5 group-hover:scale-110 transition-transform" />
             Local
-            <PhCaretDown class="ml-2 size-2 opacity-40 group-hover:opacity-100" />
+            <PhCaretDown class="ml-2 size-2 opacity-60 group-hover:opacity-100" />
           </UiButton>
         </UiDropdownMenuTrigger>
         <UiDropdownMenuContent align="end" class="w-48 rounded-none border-2 p-1">
-           <UiDropdownMenuLabel class="text-[9px] font-black uppercase tracking-[0.2em] text-primary/40 p-2">Active Environment</UiDropdownMenuLabel>
+           <UiDropdownMenuLabel class="text-[9px] font-black uppercase tracking-[0.2em] text-primary/80 p-2">Active Environment</UiDropdownMenuLabel>
            <UiDropdownMenuItem class="rounded-none font-bold uppercase text-[10px]">Local</UiDropdownMenuItem>
-           <UiDropdownMenuItem class="rounded-none font-bold uppercase text-[10px] opacity-40">Staging</UiDropdownMenuItem>
+           <UiDropdownMenuItem class="rounded-none font-bold uppercase text-[10px] opacity-70">Staging</UiDropdownMenuItem>
         </UiDropdownMenuContent>
       </UiDropdownMenu>
 
@@ -143,10 +143,10 @@ onBeforeUnmount(() => {
 
       <!-- Date/Time Display -->
       <div class="hidden items-center gap-2 font-mono text-[11px] tabular-nums tracking-widest text-muted-foreground sm:flex">
-        <PhClock class="size-3.5 opacity-50" />
-        <span class="font-bold text-foreground/40">{{ currentDate }}</span>
-        <span class="text-border opacity-30">/</span>
-        <span class="font-bold text-foreground/80">{{ currentTime }}</span>
+        <PhClock class="size-3.5 opacity-80" />
+        <span class="font-bold text-foreground/70">{{ currentDate }}</span>
+        <span class="text-border opacity-60">/</span>
+        <span class="font-bold text-foreground/90">{{ currentTime }}</span>
       </div>
     </div>
   </header>

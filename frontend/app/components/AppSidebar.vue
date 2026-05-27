@@ -4,10 +4,11 @@ import {
   PhFolderOpen,
   PhHouse,
   PhSignOut,
+  PhGearSix,
   PhSidebarSimple,
+  PhUsersThree,
   PhX,
   PhUserCircle,
-  PhActivity,
   PhDesktop,
   PhMoon,
   PhSun,
@@ -31,9 +32,11 @@ const props = defineProps<{
 defineEmits<{
   toggle: []
   logout: []
+  navigate: []
 }>()
 
 const theme = useThemePreference()
+const route = useRoute()
 
 const healthLabel = computed(() => {
   if (props.healthStatus === 'ok') return 'Online'
@@ -42,9 +45,11 @@ const healthLabel = computed(() => {
 })
 
 const navItems = [
-  { label: 'Overview', icon: PhHouse, active: true },
-  { label: 'Collections', icon: PhFolderOpen, active: false },
-  { label: 'Environments', icon: PhDatabase, active: false },
+  { label: 'Overview', to: '/', icon: PhHouse },
+  { label: 'Collections', to: '/collections', icon: PhFolderOpen },
+  { label: 'Environments', to: '/environments', icon: PhDatabase },
+  { label: 'Access', to: '/access', icon: PhUsersThree },
+  { label: 'Settings', to: '/settings', icon: PhGearSix },
 ]
 
 const themeItems: Array<{
@@ -58,6 +63,52 @@ const themeItems: Array<{
 ]
 
 const activeThemeItem = computed(() => themeItems.find(item => item.value === theme.preference.value) ?? themeItems[1])
+const themeButton = ref<HTMLElement | null>(null)
+const themeMenu = ref<HTMLElement | null>(null)
+const themeMenuOpen = ref(false)
+const themeMenuPosition = reactive({
+  top: 0,
+  left: 0,
+})
+
+const positionThemeMenu = () => {
+  const rect = themeButton.value?.getBoundingClientRect()
+  if (!rect) return
+
+  themeMenuPosition.top = rect.top
+  themeMenuPosition.left = rect.right + 8
+}
+
+const toggleThemeMenu = async () => {
+  themeMenuOpen.value = !themeMenuOpen.value
+  if (!themeMenuOpen.value) return
+
+  await nextTick()
+  positionThemeMenu()
+}
+
+const selectTheme = (value: ThemePreference) => {
+  theme.setTheme(value)
+  themeMenuOpen.value = false
+}
+
+const handleThemeMenuPointerDown = (event: PointerEvent) => {
+  const target = event.target as Node | null
+  if (!themeMenuOpen.value || !target) return
+  if (themeButton.value?.contains(target) || themeMenu.value?.contains(target)) return
+
+  themeMenuOpen.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', handleThemeMenuPointerDown)
+  window.addEventListener('resize', positionThemeMenu)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', handleThemeMenuPointerDown)
+  window.removeEventListener('resize', positionThemeMenu)
+})
 </script>
 
 <template>
@@ -109,20 +160,21 @@ const activeThemeItem = computed(() => themeItems.find(item => item.value === th
       <template v-for="(item, index) in navItems" :key="item.label">
         <UiTooltip :disabled="!collapsed">
           <UiTooltipTrigger as-child>
-            <UiButton
-              class="group relative h-10 w-full rounded-none border border-transparent transition-all duration-200"
+            <NuxtLink
+              :to="item.to"
+              class="group relative flex h-10 w-full items-center rounded-none border border-transparent transition-all duration-200"
               :class="[
                 collapsed ? 'justify-center px-0' : 'justify-start px-3',
-                item.active 
+                route.path === item.to
                   ? 'bg-primary/7 text-primary font-black border-primary/10 shadow-xs' 
                   : 'text-muted-foreground hover:bg-primary/3 hover:text-foreground hover:border-primary/5'
               ]"
-              variant="ghost"
+              @click="$emit('navigate')"
             >
               <component 
                 :is="item.icon" 
                 class="size-4.5 shrink-0 transition-transform group-hover:scale-110" 
-                :class="[!collapsed && 'mr-3', item.active ? 'text-primary' : 'text-muted-foreground/40']" 
+                :class="[!collapsed && 'mr-3', route.path === item.to ? 'text-primary' : 'text-muted-foreground/40']"
               />
               <span v-if="!collapsed" class="truncate text-[10px] font-bold uppercase tracking-widest">{{ item.label }}</span>
 
@@ -130,8 +182,8 @@ const activeThemeItem = computed(() => themeItems.find(item => item.value === th
               <span v-if="!collapsed" class="ml-auto font-mono text-[8px] font-black opacity-20 group-hover:opacity-60 transition-opacity">0{{ index + 1 }}</span>
 
               <!-- Active State Glow Bar -->
-              <div v-if="item.active" class="absolute left-0 top-[20%] h-[60%] w-0.75 bg-primary shadow-[0_0_12px_rgba(16,185,129,0.55)]" />
-            </UiButton>
+              <div v-if="route.path === item.to" class="absolute left-0 top-[20%] h-[60%] w-0.75 bg-primary shadow-[0_0_12px_rgba(16,185,129,0.55)]" />
+            </NuxtLink>
           </UiTooltipTrigger>
           <UiTooltipContent v-if="collapsed" side="right">{{ item.label }}</UiTooltipContent>
         </UiTooltip>
@@ -141,13 +193,17 @@ const activeThemeItem = computed(() => themeItems.find(item => item.value === th
     <!-- Modular Footer -->
     <div class="mt-auto flex flex-col border-t-2 border-primary/10 bg-primary/2 p-2 gap-2">
       <!-- Module 0: Theme Preference -->
-      <UiDropdownMenu>
-        <UiDropdownMenuTrigger as-child>
+      <UiTooltip :disabled="!collapsed">
+        <UiTooltipTrigger as-child>
           <button
-            class="flex h-9 w-full items-center rounded-none border border-primary/10 bg-background/50 px-3 text-muted-foreground shadow-inner transition-colors hover:border-primary/30 hover:text-foreground"
+            ref="themeButton"
+            class="flex h-9 w-full items-center rounded-none border border-primary/10 bg-background/50 px-3 text-muted-foreground shadow-inner transition-colors hover:border-primary/30 hover:text-foreground outline-none"
             :class="collapsed ? 'justify-center px-0' : 'justify-start'"
             type="button"
-            :title="`Theme: ${activeThemeItem.label}`"
+            :aria-expanded="themeMenuOpen"
+            :aria-label="`Theme: ${activeThemeItem.label}`"
+            aria-haspopup="menu"
+            @click="toggleThemeMenu"
           >
             <component :is="activeThemeItem.icon" class="size-4 shrink-0 text-primary" :class="!collapsed && 'mr-3'" />
             <span v-if="!collapsed" class="truncate font-mono text-[9px] font-black uppercase tracking-[0.2em]">
@@ -157,19 +213,33 @@ const activeThemeItem = computed(() => themeItems.find(item => item.value === th
               {{ activeThemeItem.label }}
             </span>
           </button>
-        </UiDropdownMenuTrigger>
+        </UiTooltipTrigger>
 
-        <UiDropdownMenuContent
-          align="start"
-          side="right"
-          class="w-44 rounded-none border-2 p-1"
+        <UiTooltipContent v-if="collapsed && !themeMenuOpen" side="right">
+          Theme: {{ activeThemeItem.label }}
+        </UiTooltipContent>
+      </UiTooltip>
+
+      <Teleport to="body">
+        <div
+          v-if="themeMenuOpen"
+          ref="themeMenu"
+          class="fixed z-50 w-44 rounded-none border-2 bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+          :style="{ top: `${themeMenuPosition.top}px`, left: `${themeMenuPosition.left}px` }"
+          role="menu"
         >
-          <UiDropdownMenuItem
+          <div class="p-2 font-mono text-[9px] font-black uppercase tracking-[0.2em] text-primary/45">
+            Theme preference
+          </div>
+          <button
             v-for="item in themeItems"
             :key="item.value"
-            class="grid grid-cols-[18px_minmax(0,1fr)_14px] gap-2 rounded-none px-2 py-2"
+            class="grid w-full grid-cols-[18px_minmax(0,1fr)_14px] gap-2 rounded-none px-2 py-2 text-left outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
             :class="theme.preference.value === item.value ? 'bg-primary/8 text-foreground' : 'text-muted-foreground'"
-            @click="theme.setTheme(item.value)"
+            role="menuitemradio"
+            type="button"
+            :aria-checked="theme.preference.value === item.value"
+            @click="selectTheme(item.value)"
           >
             <component
               :is="item.icon"
@@ -178,9 +248,9 @@ const activeThemeItem = computed(() => themeItems.find(item => item.value === th
             />
             <span class="font-mono text-[10px] font-black uppercase tracking-widest">{{ item.label }}</span>
             <PhCheck v-if="theme.preference.value === item.value" class="size-3 self-center text-primary" />
-          </UiDropdownMenuItem>
-        </UiDropdownMenuContent>
-      </UiDropdownMenu>
+          </button>
+        </div>
+      </Teleport>
       
       <!-- Module 1: System Status -->
       <UiTooltip>
@@ -257,7 +327,13 @@ const activeThemeItem = computed(() => themeItems.find(item => item.value === th
             <span v-if="!collapsed" class="truncate text-[9px] font-black uppercase tracking-[0.2em]">Terminate Session</span>
           </UiButton>
         </UiTooltipTrigger>
-        <UiTooltipContent side="right">Terminate Session</UiTooltipContent>
+        <UiTooltipContent
+          arrow-class="border-destructive"
+          class="border-destructive text-destructive shadow-[3px_3px_0_0_rgba(239,68,68,1)] dark:shadow-[3px_3px_0_0_rgba(239,68,68,0.55)]"
+          side="right"
+        >
+          Terminate Session
+        </UiTooltipContent>
       </UiTooltip>
 
     </div>

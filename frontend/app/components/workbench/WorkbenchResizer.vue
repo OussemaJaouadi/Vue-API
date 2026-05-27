@@ -59,22 +59,28 @@ useEventListener('mouseup', () => {
 
 <template>
   <div
-    class="relative flex items-center justify-center transition-colors hover:bg-primary/30"
+    class="group relative flex items-center justify-center transition-all duration-300 select-none z-20"
     :class="[
-      orientation === 'horizontal' ? 'w-1.5 h-full cursor-col-resize' : 'h-1.5 w-full cursor-row-resize',
-      isDragging ? 'bg-primary/50' : 'bg-transparent'
+      orientation === 'horizontal' ? 'w-1.5 h-full cursor-col-resize hover:bg-primary/10' : 'h-1.5 w-full cursor-row-resize hover:bg-primary/10',
+      isDragging ? 'bg-primary/20' : 'bg-transparent'
     ]"
     @mousedown="startDrag"
   >
-    <!-- Tactical Handle - centered within drag area -->
+    <!-- Technical Handle -->
     <div 
-      class="absolute bg-primary/40 transition-all group-hover:bg-primary/80"
+      class="absolute bg-primary transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
       :class="[
         orientation === 'horizontal' 
-          ? 'w-0.5 h-10 rounded-full' 
-          : 'h-0.5 w-10 rounded-full',
-        isDragging ? 'bg-primary scale-150' : ''
+          ? 'w-[2px] h-12 opacity-20 group-hover:opacity-100 group-hover:h-20' 
+          : 'h-[2px] w-12 opacity-20 group-hover:opacity-100 group-hover:w-20',
+        isDragging ? 'opacity-100 scale-x-150' : ''
       ]"
+    />
+    
+    <div 
+      v-if="isDragging"
+      class="absolute bg-primary/40 animate-ping"
+      :class="orientation === 'horizontal' ? 'w-px h-full' : 'h-px w-full'"
     />
   </div>
 </template>

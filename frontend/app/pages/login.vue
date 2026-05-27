@@ -11,7 +11,7 @@ const login = ref('')
 const password = ref('')
 const error = ref('')
 const submitting = ref(false)
-const inputClass = 'rounded-none border-2 border-muted-foreground/20 h-12 px-4 focus-visible:ring-0 focus-visible:border-primary transition-all duration-200 bg-muted/20 font-mono text-sm placeholder:text-muted-foreground/40 focus-visible:bg-background focus-visible:shadow-[0_0_0_4px_oklch(0.508_0.118_165.612_/_0.10)] disabled:opacity-60 disabled:cursor-not-allowed'
+const inputClass = 'rounded-none border-2 border-muted-foreground/20 h-12 px-4 focus-visible:ring-0 focus-visible:border-primary transition-all duration-200 bg-muted/20 font-mono text-sm placeholder:text-muted-foreground/80 focus-visible:bg-background focus-visible:shadow-[0_0_0_4px_oklch(0.508_0.118_165.612_/_0.10)] disabled:opacity-60 disabled:cursor-not-allowed'
 
 onMounted(async () => {
   if (await auth.loadMe()) {
@@ -29,7 +29,8 @@ const submit = async () => {
     })
     await navigateTo('/')
   } catch (err: any) {
-    error.value = err?.data?.error || err?.message || 'Login failed'
+    const backendErr = err?.data?.error
+    error.value = typeof backendErr === 'string' ? backendErr : err?.message || 'Login failed'
   } finally {
     submitting.value = false
   }

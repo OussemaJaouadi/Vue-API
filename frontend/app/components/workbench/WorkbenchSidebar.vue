@@ -4,8 +4,7 @@ import {
   PhCaretDown,
   PhFolder,
   PhPlus,
-  PhLightning,
-  PhDotsThreeVertical,
+  PhGlobe,
   PhTrash,
   PhNotePencil,
   PhFilePlus,
@@ -40,12 +39,12 @@ const methodAbreviations: Record<ApiMethod, string> = {
 }
 
 const methodStyles: Record<ApiMethod, string> = {
-  GET: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-  POST: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30',
-  PUT: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
-  PATCH: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30',
-  DELETE: 'bg-destructive/10 text-destructive border-destructive/30',
-  SOCKET: 'bg-primary/20 text-primary border-primary/40',
+  GET: 'border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400',
+  POST: 'border-blue-500/20 bg-blue-500/5 text-blue-600 dark:text-blue-400',
+  PUT: 'border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400',
+  PATCH: 'border-purple-500/20 bg-purple-500/5 text-purple-600 dark:text-purple-400',
+  DELETE: 'border-destructive/20 bg-destructive/5 text-destructive',
+  SOCKET: 'border-primary/30 bg-primary/10 text-primary',
 }
 
 const renamingId = ref<string | null>(null)
@@ -74,7 +73,6 @@ const handleDragStart = (e: DragEvent, requestId: string) => {
   }
 }
 
-// Calculate drop position based on mouse position
 const getDropPosition = (e: DragEvent, targetIndex: number, totalItems: number): 'before' | 'after' => {
   const targetEl = (e.currentTarget as HTMLElement)
   const rect = targetEl.getBoundingClientRect()
@@ -83,7 +81,6 @@ const getDropPosition = (e: DragEvent, targetIndex: number, totalItems: number):
   return y < threshold ? 'before' : 'after'
 }
 
-// Handle drag over with position detection
 const handleDragOverRoot = (e: DragEvent, index: number, totalItems: number) => {
   e.preventDefault()
   const position = getDropPosition(e, index, totalItems)
@@ -109,7 +106,6 @@ const handleDragLeave = () => {
   dragOverPosition.value = null
 }
 
-// Perform drop with calculated position
 const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: number, position?: 'before' | 'after' | 'inside' | null) => {
   const requestId = e.dataTransfer?.getData('requestId')
   if (!requestId) return
@@ -128,65 +124,45 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
 </script>
 
 <template>
-  <aside class="hidden min-w-0 flex-col border-r bg-card/30 lg:flex select-none">
+  <aside class="hidden w-64 flex-col border-r bg-card/30 lg:flex select-none overflow-hidden">
     <!-- Project Root Header -->
     <div 
-      class="flex h-12 items-center justify-between border-b bg-muted/30 px-4"
+      class="flex h-14 items-center justify-between border-b bg-muted/30 px-4"
       @dragover.prevent
       @dragover="handleDragOverRoot($event, workbench.rootRequests.value.length, workbench.rootRequests.value.length)"
       @dragleave="handleDragLeave"
       @drop="handleDrop($event)"
     >
       <div class="flex items-center gap-3 overflow-hidden">
-        <div class="grid size-6 place-items-center bg-primary border-2 border-primary shadow-[2px_2px_0_0_rgba(16,185,129,0.2)] text-primary-foreground">
-          <component :is="WORKBENCH_ICONS['PhGlobe']" class="size-3.5" />
+        <div class="grid size-8 place-items-center bg-primary border-2 border-primary shadow-[2px_2px_0_0_rgba(16,185,129,0.2)] text-primary-foreground shrink-0 transition-transform hover:scale-105">
+          <PhGlobe class="size-4.5" />
         </div>
-        <div class="flex flex-col leading-none overflow-hidden">
-          <span class="truncate font-mono text-[11px] font-black uppercase tracking-tight">Core API</span>
-          <span class="text-[9px] font-bold text-primary/40 uppercase tracking-widest">Explorer</span>
+        <div class="flex flex-col leading-tight overflow-hidden">
+          <span class="truncate font-mono text-[11px] font-black uppercase tracking-tight">Core Registry</span>
+          <span class="text-[9px] font-bold text-primary/80 uppercase tracking-widest">Workbench</span>
         </div>
       </div>
       
-      <!-- Global Actions -->
       <div class="flex items-center gap-1">
-        <UiTooltip>
-          <UiTooltipTrigger as-child>
-            <button @click="workbench.addRequest()" class="p-1 text-muted-foreground/40 hover:text-primary transition-all hover:bg-primary/5">
-              <PhFilePlus class="size-3.5" />
-            </button>
-          </UiTooltipTrigger>
-          <UiTooltipContent side="bottom">New Root Request</UiTooltipContent>
-        </UiTooltip>
-        <UiTooltip>
-          <UiTooltipTrigger as-child>
-            <button @click="workbench.addFolder()" class="p-1 text-muted-foreground/40 hover:text-primary transition-all hover:bg-primary/5">
-              <PhFolderPlus class="size-3.5" />
-            </button>
-          </UiTooltipTrigger>
-          <UiTooltipContent side="bottom">New Collection</UiTooltipContent>
-        </UiTooltip>
+        <button @click="workbench.addRequest()" class="p-1.5 text-muted-foreground/80 hover:text-primary transition-all hover:bg-primary/5 active:scale-95" title="New Request">
+          <PhFilePlus class="size-4" />
+        </button>
+        <button @click="workbench.addFolder()" class="p-1.5 text-muted-foreground/80 hover:text-primary transition-all hover:bg-primary/5 active:scale-95" title="New Collection">
+          <PhFolderPlus class="size-4" />
+        </button>
       </div>
     </div>
 
-    <!-- The VS Code Style Explorer -->
+    <!-- Explorer Navigation -->
     <nav class="flex-1 overflow-y-auto p-1 custom-scrollbar">
       <!-- Root Requests -->
       <div class="space-y-0.5 mb-2">
-        <!-- Drop indicator at root level (before first item or at end) -->
-        <div 
-          v-if="dragOverTarget === `root-0` && dragOverPosition === 'before'"
-          class="h-0.5 bg-primary"
-        />
+        <div v-if="dragOverTarget === `root-0` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
         
         <template v-for="(request, index) in workbench.rootRequests.value" :key="request.id">
-          <!-- Drop indicator before this item -->
-          <div 
-            v-if="dragOverTarget === `root-${index}` && dragOverPosition === 'before'"
-            class="h-0.5 bg-primary"
-          />
+          <div v-if="index > 0 && dragOverTarget === `root-${index}` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
           
           <button
-            :data-index="index"
             draggable="true"
             @dragstart="handleDragStart($event, request.id)"
             @click="workbench.openRequest(request)"
@@ -194,86 +170,85 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
             @dragover="handleDragOverRoot($event, index, workbench.rootRequests.value.length)"
             @dragleave="handleDragLeave"
             @drop="handleDrop($event, undefined, index, dragOverPosition)"
-            class="group relative flex h-8 w-full items-center gap-2.5 px-2 transition-all cursor-grab active:cursor-grabbing"
-            :class="request.id === workbench.activeRequestId.value ? 'bg-primary/10 text-foreground shadow-sm' : 'text-muted-foreground/70 hover:bg-primary/3'"
+            class="group relative flex h-10 w-full items-center gap-3 px-3 transition-all duration-200 outline-none"
+            :class="request.id === workbench.activeRequestId.value ? 'bg-primary/10 text-foreground' : 'text-muted-foreground/70 hover:bg-primary/3 hover:text-foreground'"
           >
-            <div class="flex h-4.5 w-10 items-center justify-center border font-mono text-[8px] font-black uppercase tracking-tighter" :class="methodStyles[request.method]">
+            <div v-if="request.id === workbench.activeRequestId.value" class="wb-active-indicator" />
+            
+            <div class="flex h-5 w-10 shrink-0 items-center justify-center border-2 font-mono text-[8px] font-black uppercase tracking-tighter shadow-sm" :class="methodStyles[request.method]">
                {{ methodAbreviations[request.method] }}
             </div>
-            <input 
-              v-if="renamingId === request.id"
-              v-model="renameValue"
-              class="min-w-0 flex-1 bg-background border border-primary/40 px-1 outline-none font-bold text-[10px]"
-              @blur="handleRename(request, false)"
-              @keyup.enter="handleRename(request, false)"
-              v-focus
-            >
-            <span v-else class="truncate font-bold text-[10px] tracking-tight">{{ request.name }}</span>
+
+            <div class="min-w-0 flex-1 text-left">
+              <input 
+                v-if="renamingId === request.id"
+                v-model="renameValue"
+                class="w-full bg-background border-2 border-primary/40 px-1 outline-none font-bold text-[11px] tracking-tight"
+                @blur="handleRename(request, false)"
+                @keyup.enter="handleRename(request, false)"
+                v-focus
+              >
+              <span v-else class="block truncate font-bold text-[11px] tracking-tight uppercase">{{ request.name }}</span>
+            </div>
             
-            <!-- Inline Actions -->
-            <div class="ml-auto flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <button @click.stop="startRename(request.id, request.name)" class="p-1 hover:text-primary"><PhNotePencil class="size-3" /></button>
-              <button @click.stop="workbench.deleteItem(request.id, false)" class="p-1 hover:text-destructive"><PhTrash class="size-3" /></button>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+              <button @click.stop="startRename(request.id, request.name)" class="p-1 hover:text-primary active:scale-90"><PhNotePencil class="size-3.5" /></button>
+              <button @click.stop="workbench.deleteItem(request.id, false)" class="p-1 hover:text-destructive active:scale-90"><PhTrash class="size-3.5" /></button>
             </div>
           </button>
         </template>
         
-        <!-- Drop indicator at end of root requests -->
-        <div 
-          v-if="dragOverTarget === `root-${workbench.rootRequests.value.length - 1}` && dragOverPosition === 'after'"
-          class="h-0.5 bg-primary"
-        />
+        <div v-if="dragOverTarget === `root-${workbench.rootRequests.value.length - 1}` && dragOverPosition === 'after'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
       </div>
 
-      <!-- Folders & Nested Requests -->
-      <div v-for="group in workbench.treeItems.value" :key="group.name" class="mb-0.5">
+      <!-- Folders & Nested -->
+      <div v-for="group in workbench.treeItems.value" :key="group.name" class="mb-1">
         <div 
-          class="group flex w-full items-center gap-2 px-2 py-1 text-left transition-all hover:bg-primary/4"
+          class="group relative flex h-10 w-full items-center gap-2 px-2 transition-all duration-200 cursor-pointer outline-none"
+          :class="dragOverTarget === `folder-header-${group.name}` ? 'bg-primary/5' : 'hover:bg-primary/3'"
           @click="toggleFolder(group.name)"
           @dragover.prevent
           @dragover="handleDragOverFolderHeader($event, group.name)"
           @dragleave="handleDragLeave"
           @drop="handleDrop($event, group.name, 0, 'inside')"
         >
-          <component :is="expandedFolders[group.name] ? PhCaretDown : PhCaretRight" class="size-3 text-muted-foreground/40" />
-          <PhFolder class="size-4 text-primary/60" />
-          
-          <!-- Inside indicator -->
-          <div v-if="dragOverTarget === `folder-header-${group.name}`" class="ml-auto">
-            <PhArrowElbowDownRight class="size-3 text-primary" />
+          <div class="flex size-6 items-center justify-center">
+            <component :is="expandedFolders[group.name] ? PhCaretDown : PhCaretRight" class="size-3 transition-colors" :class="expandedFolders[group.name] ? 'text-primary' : 'text-muted-foreground/30'" />
           </div>
           
-          <input 
-            v-if="renamingId === group.name"
-            v-model="renameValue"
-            class="min-w-0 flex-1 bg-background border border-primary/40 px-1 outline-none font-black text-[10px] uppercase"
-            @blur="handleRename(group, true)"
-            @keyup.enter="handleRename(group, true)"
-            v-focus
-          >
-          <span v-else class="truncate font-mono text-[10px] font-black uppercase tracking-widest text-foreground/70">{{ group.name }}</span>
+          <div class="grid size-6 place-items-center border-2 transition-colors" :class="expandedFolders[group.name] ? 'border-primary/20 bg-primary/5 text-primary' : 'border-border/60 bg-muted/10 text-muted-foreground/80'">
+            <PhFolder class="size-3.5" />
+          </div>
           
-          <div class="ml-auto flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <button @click.stop="workbench.addRequest(group.name)" class="p-1 hover:text-primary"><PhFilePlus class="size-3" /></button>
-            <button @click.stop="startRename(group.name, group.name)" class="p-1 hover:text-primary"><PhNotePencil class="size-3" /></button>
-            <button @click.stop="workbench.deleteItem(group.name, true)" class="p-1 hover:text-destructive"><PhTrash class="size-3" /></button>
+          <div class="min-w-0 flex-1">
+            <input 
+              v-if="renamingId === group.name"
+              v-model="renameValue"
+              class="w-full bg-background border-2 border-primary/40 px-1 outline-none font-black text-[11px] uppercase tracking-widest"
+              @blur="handleRename(group, true)"
+              @keyup.enter="handleRename(group, true)"
+              v-focus
+            >
+            <span v-else class="block truncate font-mono text-[11px] font-black uppercase tracking-widest" :class="expandedFolders[group.name] ? 'text-primary' : 'text-foreground/90'">{{ group.name }}</span>
+          </div>
+
+          <div v-if="dragOverTarget === `folder-header-${group.name}`" class="mr-2">
+            <PhArrowElbowDownRight class="size-3.5 text-primary animate-bounce" />
+          </div>
+          
+          <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+            <button @click.stop="workbench.addRequest(group.name)" class="p-1 hover:text-primary" title="New Nested Request"><PhFilePlus class="size-3.5" /></button>
+            <button @click.stop="startRename(group.name, group.name)" class="p-1 hover:text-primary"><PhNotePencil class="size-3.5" /></button>
+            <button @click.stop="workbench.deleteItem(group.name, true)" class="p-1 hover:text-destructive"><PhTrash class="size-3.5" /></button>
           </div>
         </div>
 
-        <!-- Nested Requests -->
-        <div v-if="expandedFolders[group.name]" class="ml-4 border-l border-primary/10 pl-1 mt-0.5 space-y-0.5">
-          <!-- Drop indicator at folder start -->
-          <div 
-            v-if="dragOverTarget === `folder-${group.name}-0` && dragOverPosition === 'before'"
-            class="h-0.5 bg-primary"
-          />
+        <!-- Nested Items -->
+        <div v-if="expandedFolders[group.name]" class="ml-4 border-l-2 border-primary/5 pl-1 mt-0.5 space-y-0.5">
+          <div v-if="dragOverTarget === `folder-${group.name}-0` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
           
           <template v-for="(request, index) in group.requests" :key="request.id">
-            <!-- Drop indicator before this item -->
-            <div 
-              v-if="dragOverTarget === `folder-${group.name}-${index}` && dragOverPosition === 'before'"
-              class="h-0.5 bg-primary"
-            />
+            <div v-if="index > 0 && dragOverTarget === `folder-${group.name}-${index}` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
             
             <button
               draggable="true"
@@ -283,35 +258,35 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
               @dragover="handleDragOverFolderRequest($event, group.name, index, group.requests.length)"
               @dragleave="handleDragLeave"
               @drop.stop="handleDrop($event, group.name, index, dragOverPosition)"
-              class="group relative flex h-8 w-full items-center gap-2.5 px-2 transition-all cursor-grab active:cursor-grabbing"
-              :class="request.id === workbench.activeRequestId.value ? 'bg-primary/10 text-foreground shadow-sm' : 'text-muted-foreground/70 hover:bg-primary/3'"
+              class="group relative flex h-9 w-full items-center gap-2.5 px-3 transition-all duration-200 outline-none"
+              :class="request.id === workbench.activeRequestId.value ? 'bg-primary/10 text-foreground' : 'text-muted-foreground hover:bg-primary/[0.02] hover:text-foreground'"
             >
-              <div class="flex h-4.5 w-10 items-center justify-center border font-mono text-[8px] font-black uppercase tracking-tighter" :class="methodStyles[request.method]">
+              <div v-if="request.id === workbench.activeRequestId.value" class="wb-active-indicator" />
+              
+              <div class="flex h-4.5 w-9 shrink-0 items-center justify-center border-2 font-mono text-[7px] font-black uppercase tracking-tighter" :class="methodStyles[request.method]">
                  {{ methodAbreviations[request.method] }}
               </div>
               
-              <input 
-                v-if="renamingId === request.id"
-                v-model="renameValue"
-                class="min-w-0 flex-1 bg-background border border-primary/40 px-1 outline-none font-bold text-[10px]"
-                @blur="handleRename(request, false)"
-                @keyup.enter="handleRename(request, false)"
-                v-focus
-              >
-              <span v-else class="truncate font-bold text-[10px] tracking-tight">{{ request.name }}</span>
+              <div class="min-w-0 flex-1 text-left">
+                <input 
+                  v-if="renamingId === request.id"
+                  v-model="renameValue"
+                  class="w-full bg-background border-2 border-primary/40 px-1 outline-none font-bold text-[10px] tracking-tight"
+                  @blur="handleRename(request, false)"
+                  @keyup.enter="handleRename(request, false)"
+                  v-focus
+                >
+                <span v-else class="block truncate font-bold text-[10px] tracking-tight uppercase">{{ request.name }}</span>
+              </div>
 
-              <div class="ml-auto flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <button @click.stop="startRename(request.id, request.name)" class="p-1 hover:text-primary"><PhNotePencil class="size-3" /></button>
-                <button @click.stop="workbench.deleteItem(request.id, false)" class="p-1 hover:text-destructive"><PhTrash class="size-3" /></button>
+              <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                <button @click.stop="startRename(request.id, request.name)" class="p-0.5 hover:text-primary"><PhNotePencil class="size-3" /></button>
+                <button @click.stop="workbench.deleteItem(request.id, false)" class="p-0.5 hover:text-destructive"><PhTrash class="size-3" /></button>
               </div>
             </button>
           </template>
           
-          <!-- Drop indicator at end of folder -->
-          <div 
-            v-if="dragOverTarget === `folder-${group.name}-${group.requests.length - 1}` && dragOverPosition === 'after'"
-            class="h-0.5 bg-primary"
-          />
+          <div v-if="dragOverTarget === `folder-${group.name}-${group.requests.length - 1}` && dragOverPosition === 'after'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
         </div>
       </div>
     </nav>

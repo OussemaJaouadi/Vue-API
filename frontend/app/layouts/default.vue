@@ -32,6 +32,12 @@ const pageSubtitle = computed(() => {
 })
 
 onMounted(async () => {
+  const authenticated = await auth.loadMe()
+  if (!authenticated) {
+    await navigateTo('/login')
+    return
+  }
+
   try {
     const res = await get<{ status: string }>('/healthz')
     if (res.status === 'ok') {
@@ -54,6 +60,7 @@ onMounted(async () => {
       :health-status="healthStatus"
       :user="auth.user.value"
       @logout="auth.logout"
+      @navigate="mobileSidebarOpen = false"
       @toggle="sidebarCollapsed = !sidebarCollapsed"
     />
 
@@ -81,6 +88,7 @@ onMounted(async () => {
             :user="auth.user.value"
             @logout="auth.logout"
             @toggle="mobileSidebarOpen = false"
+            @navigate="mobileSidebarOpen = false"
           />
         </UiSheetContent>
       </UiSheet>

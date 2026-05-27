@@ -34,9 +34,8 @@ export function useApiClient() {
         return response as T
       }
 
-      // If the backend returned a JSON error, use that message
       const backendError = err.data?.error
-      if (backendError) {
+      if (typeof backendError === 'string') {
         err.message = backendError
       }
       throw err

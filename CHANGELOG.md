@@ -4,14 +4,26 @@
 
 ## New
 
-- Extended login to accept either email or username through a single `login` field.
-- Added username lookup to the user repository contract, memory adapter, and GORM adapter.
-- Redacted sensitive request query values from logs: `ticket`, `token`, `access_token`, and `refresh_token`.
-- Quieted expected GORM `record not found` logs.
-- Prefer username lookup before email lookup when login input does not contain `@`.
+- Added HTTP execution service with configurable timeout, TLS, TTFB tracing, and header/query injection.
+- Added WebSocket execution manager with bidirectional relay and broker event publishing.
+- Added authenticated /execute API route group with Bearer token middleware:
+  - POST /execute — execute an HTTP request
+  - POST /execute/ws — open a WebSocket connection
+  - POST /execute/:id/ws/send — send a payload over an active socket
+  - DELETE /execute/:id — close a WebSocket execution
+- Integrated execution events into the real-time SSE broker.
+- Extended login to support email or username lookup.
+- Improved logging for security and database noise.
+- Upgraded gorilla/websocket and gorm dependencies from indirect to direct.
 
 ## Old
 
+- Added HTTP and WebSocket execution engine.
+- Integrated execution events into the real-time SSE broker.
+- Added authenticated /execute API route group.
+- Extended login to support email or username lookup.
+- Improved logging for security and database noise.
+- Upgraded gorilla/websocket and gorm dependencies from indirect to direct.
 - Added auth routes: register, login, refresh, logout, and me.
 - Added Argon2id password hashing.
 - Added access and refresh JWTs with separate secrets.
@@ -36,18 +48,33 @@
 
 ## New
 
-- Added workbench shell with collapsible app navigation, project topbar, request tabs, split-pane editor/response layout, and persisted pane sizing.
-- Added mock collection/request data consumed through `useWorkbench`.
-- Added request controls for method selection, URL editing, params, headers, request body, and request auth configuration.
-- Added CodeMirror-backed request/response surfaces with language selection, formatting, minify, copy, bracket closing, fold gutters, and tab handling.
-- Added mock execution responses per endpoint.
-- Added WebSocket display scaffold with `WS` requests, connect/disconnect state, message composer, mock send/receive events, and timeline display.
-- Added backend-owned WebSocket execution notes to the phase docs.
-- Added sidebar theme preference control for light, system, and dark modes.
-- Improved dark-mode surface, border, input, and primary color contrast.
+- Added Access Control page with user roster, grant editor, policy panel, execution matrix, and invite sheet.
+- Added Collections page with expand/collapse tree, environment policies, and multi-format import (OpenAPI, Swagger, Postman, Workbench).
+- Added Environments page with variable table, secret masking, visibility tiers, and danger-zone delete.
+- Added Settings page with theme preference selector.
+- Added `useAccess`, `useCollections`, `useEnvironments` composables and `types/access.ts`.
+- Integrated workbench with real backend execution replacing all mock responses.
+- Added real-time WebSocket event timeline driven by SSE broker events.
+- Added auth guard in default layout; moved `loadMe` check out of index page.
+- Registered SSE listeners for all WS lifecycle events in useAuthSession.
+- Refactored HeadersTable with drag-to-reorder, new column layout, and auto ghost rows.
+- Refactored AuthPanel from table layout to labeled form with segmented API-key placement.
+- Refactored Response panel with dynamic Content-Type language detection and `formatSize` helper.
+- Refactored CodeSurface, WebSocket panel, Editor, Sidebar, RequestPanel, TabBar, Resizer, CommandBar with updated visual tokens and consistent tactile button styles.
+- Added AppSidebar nav items with route targets and floating theme dropdown; added AppTopbar accent refinements.
+- Added custom-scrollbar, workbench-shadow, wb-active-indicator, and btn-tactile CSS utilities.
+- Fixed error handling in login, register, and API client to safely display non-string errors.
 
 ## Old
 
+- Integrated workbench with real backend execution for HTTP/WS.
+- Refactored page architecture into modular composables (`useAccess`, `useCollections`, `useEnvironments`).
+- Added real-time WebSocket event timeline.
+- Improved response viewer with dynamic formatting and language detection.
+- Added workbench shell with request controls, editor surfaces, and theme support.
+- Refactored workbench UI: sidebar navigation, command bar, editor layout, params/headers editors, auth panel, code surface, response viewer, WS panel, and tab bar.
+- Added custom scrollbar, workbench shadow, and tactile button utility CSS.
+- Fixed error handling in login, register, and API client to safely display non-string errors.
 - Added shadcn-vue UI components from the configured preset.
 - Added app logo asset usage and favicon wiring.
 - Refactored the auth pages, app shell, and first dashboard state around the generated UI primitives.

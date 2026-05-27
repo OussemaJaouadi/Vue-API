@@ -3,15 +3,7 @@ import WorkbenchSidebar from '~/components/workbench/WorkbenchSidebar.vue'
 import WorkbenchEditor from '~/components/workbench/WorkbenchEditor.vue'
 import WorkbenchResponse from '~/components/workbench/WorkbenchResponse.vue'
 
-const auth = useAuthSession()
 const workbench = useWorkbench()
-
-onMounted(async () => {
-  const ok = await auth.loadMe()
-  if (!ok) {
-    await navigateTo('/login')
-  }
-})
 </script>
 
 <template>

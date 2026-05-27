@@ -11,6 +11,7 @@ import (
 
 	"vue-api/backend/internal/auth"
 	"vue-api/backend/internal/config"
+	"vue-api/backend/internal/execution"
 	apihttp "vue-api/backend/internal/http"
 	gormstorage "vue-api/backend/internal/storage/gorm"
 )
@@ -78,6 +79,9 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 
 	eventDeps := apihttp.NewEventDeps(users, tokens)
 
+	executionService := execution.NewService()
+	wsManager := execution.NewWSManager(eventDeps.Broker)
+
 	apihttp.RegisterRoutes(router, cfg)
 	apihttp.RegisterAuthRoutes(router, apihttp.AuthRouteDeps{
 		Users:               users,
@@ -89,6 +93,12 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 		RefreshCookieSecure: cfg.Auth.RefreshCookieSecure,
 	})
 	apihttp.RegisterEventRoutes(router, eventDeps)
+	apihttp.RegisterExecutionRoutes(router, apihttp.ExecutionRouteDeps{
+		Execution: executionService,
+		WS:        wsManager,
+		Users:     users,
+		Tokens:    tokens,
+	})
 
 	return &Server{
 		addr:   cfg.HTTP.Addr,

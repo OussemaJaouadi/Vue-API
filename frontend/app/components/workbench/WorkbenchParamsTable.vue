@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  PhCheck,
   PhDotsSixVertical,
   PhX,
 } from '@phosphor-icons/vue'
@@ -73,24 +72,27 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col overflow-hidden border-0 bg-card font-mono text-xs">
-    <div class="grid shrink-0 grid-cols-[36px_42px_minmax(120px,1fr)_minmax(120px,1.3fr)_36px] border-b bg-muted/20 py-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground/60">
-      <div class="flex items-center justify-center border-r border-primary/5">#</div>
-      <div class="flex items-center justify-center border-r border-primary/5">On</div>
-      <span class="flex items-center border-r border-primary/5 px-3">Key</span>
-      <span class="flex items-center border-r border-primary/5 px-3">Value</span>
+  <div class="flex h-full min-h-0 flex-col overflow-hidden border-0 bg-card select-none">
+    <div class="grid shrink-0 grid-cols-[36px_42px_minmax(120px,1fr)_minmax(120px,1.3fr)_36px] border-b bg-muted/40 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+      <div class="flex items-center justify-center border-r border-border/10">#</div>
+      <div class="flex items-center justify-center border-r border-border/10">Use</div>
+      <span class="flex items-center border-r border-border/10 px-4">Key</span>
+      <span class="flex items-center border-r border-border/10 px-4">Value</span>
       <span />
     </div>
 
-    <div class="min-h-0 flex-1 overflow-auto">
+    <div class="min-h-0 flex-1 overflow-y-auto custom-scrollbar">
       <div
         v-for="(param, index) in workbench.queryParams.value"
         :key="param.id"
-        class="group relative grid min-h-9 grid-cols-[36px_42px_minmax(120px,1fr)_minmax(120px,1.3fr)_36px] items-stretch border-b text-[11px] transition-colors"
+        class="group relative grid min-h-10 grid-cols-[36px_42px_minmax(120px,1fr)_minmax(120px,1.3fr)_36px] items-stretch border-b transition-colors"
         :class="[
-          param.enabled ? 'bg-background hover:bg-primary/3' : 'bg-muted/10 text-muted-foreground/55 hover:bg-muted/25',
+          param.enabled ? 'bg-background hover:bg-primary/[0.03]' : 'bg-muted/10 text-muted-foreground/40 hover:bg-muted/20',
           draggedParamId === param.id && 'opacity-35',
         ]"
+        :draggable="!isGhostParam(param, index)"
+        @dragstart="startDrag(param, index, $event)"
+        @dragend="endDrag"
         @dragover.prevent="updateDropTarget(param, $event)"
         @dragleave="dropTarget?.id === param.id && (dropTarget = null)"
         @drop.prevent="dropParam(param, $event)"
@@ -102,63 +104,49 @@ onMounted(() => {
         />
 
         <div
-          class="flex cursor-grab items-center justify-center border-r border-primary/5 text-muted-foreground/20 transition-colors active:cursor-grabbing group-hover:text-primary/40"
-          draggable="true"
-          @dragstart="startDrag(param, index, $event)"
-          @dragend="endDrag"
+          class="flex cursor-grab items-center justify-center border-r border-border/5 text-[9px] font-black opacity-70 group-hover:opacity-100 active:cursor-grabbing"
+          :class="isGhostParam(param, index) && 'invisible'"
         >
-          <span class="font-mono text-[8px] font-black group-hover:hidden">{{ index + 1 }}</span>
-          <PhDotsSixVertical class="hidden size-3.5 group-hover:block" />
+          <PhDotsSixVertical class="size-3.5" />
         </div>
 
-        <div class="flex items-center justify-center border-r border-primary/5">
-          <UiTooltip>
-            <UiTooltipTrigger as-child>
-              <button
-                class="grid size-5 place-items-center border transition-all"
-                :class="param.enabled ? 'border-primary bg-primary text-primary-foreground shadow-[0_0_10px_rgba(16,185,129,0.25)]' : 'border-muted-foreground/20 bg-background text-transparent hover:text-muted-foreground'"
-                type="button"
-                @click="toggleParam(param)"
-              >
-                <PhCheck class="size-3" />
-              </button>
-            </UiTooltipTrigger>
-            <UiTooltipContent side="top">{{ param.enabled ? 'Disable parameter' : 'Enable parameter' }}</UiTooltipContent>
-          </UiTooltip>
-        </div>
+        <button
+          class="flex items-center justify-center border-r border-border/5 outline-none transition-colors"
+          type="button"
+          @click="toggleParam(param)"
+        >
+          <div
+            class="flex size-4 items-center justify-center border-2 transition-all"
+            :class="param.enabled ? 'border-primary bg-primary text-background' : 'border-muted-foreground/20 hover:border-primary/40'"
+          >
+            <div v-if="param.enabled" class="size-2 bg-background" />
+          </div>
+        </button>
 
-        <div class="flex items-center border-r border-primary/5 focus-within:bg-background">
+        <div class="flex items-center border-r border-border/5">
           <input
             v-model="param.key"
-            class="h-full w-full bg-transparent px-3 font-bold text-foreground/85 outline-none transition-colors placeholder:text-muted-foreground/25 focus:text-primary"
-            placeholder="parameter_key"
-            spellcheck="false"
+            class="h-full w-full bg-transparent px-4 font-mono text-[11px] font-black uppercase tracking-tight outline-none placeholder:text-muted-foreground/20"
+            placeholder="Parameter Key"
           >
         </div>
 
-        <div class="flex items-center border-r border-primary/5 focus-within:bg-background">
+        <div class="flex items-center border-r border-border/5">
           <input
             v-model="param.value"
-            class="h-full w-full bg-transparent px-3 text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground/25 focus:text-foreground"
-            placeholder="value or {{variable}}"
-            spellcheck="false"
+            class="h-full w-full bg-transparent px-4 font-mono text-[11px] font-bold outline-none placeholder:text-muted-foreground/20"
+            placeholder="Value"
           >
         </div>
 
-        <div class="flex items-center justify-center">
-          <UiTooltip v-if="index < workbench.queryParams.value.length - 1 || param.key || param.value">
-            <UiTooltipTrigger as-child>
-              <button
-                class="flex size-full items-center justify-center text-muted-foreground/20 transition-all hover:bg-destructive/10 hover:text-destructive active:scale-90"
-                type="button"
-                @click="workbench.removeQueryParam(param.id)"
-              >
-                <PhX class="size-3" />
-              </button>
-            </UiTooltipTrigger>
-            <UiTooltipContent side="top">Remove parameter</UiTooltipContent>
-          </UiTooltip>
-        </div>
+        <button
+          class="flex items-center justify-center text-muted-foreground/20 outline-none transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+          :class="isGhostParam(param, index) ? 'invisible' : 'opacity-0'"
+          type="button"
+          @click="workbench.removeQueryParam(param.id)"
+        >
+          <PhX class="size-3.5" />
+        </button>
       </div>
     </div>
   </div>

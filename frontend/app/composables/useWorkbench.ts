@@ -62,13 +62,13 @@ export interface WorkbenchResponse {
   status: number
   statusText: string
   duration: number
-  size: string
+  size: number
   ttfb: number
-  decoded: string
   executionTarget: string
   requestId: string
   headers: HeaderItem[]
   body: string
+  error?: string
 }
 
 export const API_METHODS: ApiMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'SOCKET']
@@ -182,7 +182,52 @@ export function useWorkbench() {
   "requestId": "{{requestId}}"
 }`)
   const webSocketMessageLanguage = useState<BodyLanguage>('workbench:ws-message-language', () => 'json')
-  const webSocketEvents = useState<WebSocketTimelineEvent[]>('workbench:ws-events', () => structuredClone(mockWebSocketEvents))
+  const webSocketEvents = useState<WebSocketTimelineEvent[]>('workbench:ws-events', () => [])
+  const webSocketExecutionId = useState<string | null>('workbench:ws-execution-id', () => null)
+
+  const auth = useAuthSession()
+  watch(() => auth.lastEvent.value, (event) => {
+    if (!event || !event.type.startsWith('ws.')) return
+    
+    const data = event.data as any
+    if (data.executionId !== webSocketExecutionId.value) return
+
+    if (event.type === 'ws.connected') {
+      webSocketState.value = 'connected'
+      loading.value = false
+      appendWebSocketEvent({
+        direction: 'system',
+        title: 'Connected through backend proxy',
+        payload: `Target: ${data.target}`,
+        timestamp: data.timestamp,
+      })
+    } else if (event.type === 'ws.message.in' || event.type === 'ws.message.in.binary') {
+      appendWebSocketEvent({
+        direction: 'in',
+        title: event.type === 'ws.message.in' ? 'Message received' : 'Binary message received',
+        payload: data.payload,
+        sizeBytes: data.sizeBytes,
+        timestamp: data.timestamp,
+      })
+    } else if (event.type === 'ws.message.out') {
+      // We already append on send, but this confirms it reached the backend
+    } else if (event.type === 'ws.error') {
+      appendWebSocketEvent({
+        direction: 'error',
+        title: 'WebSocket Error',
+        payload: data.error,
+        timestamp: data.timestamp,
+      })
+    } else if (event.type === 'ws.closed') {
+      webSocketState.value = 'closed'
+      webSocketExecutionId.value = null
+      appendWebSocketEvent({
+        direction: 'system',
+        title: 'Socket closed',
+        timestamp: data.timestamp,
+      })
+    }
+  })
 
   const isWebSocketRequest = computed(() => activeRequest.value.method === 'SOCKET')
 
@@ -252,23 +297,27 @@ export function useWorkbench() {
 
   const deleteItem = (id: string, isFolder: boolean) => {
     if (isFolder) {
+      const folder = treeItems.value.find(f => f.name === id)
+      if (folder) {
+        folder.requests.forEach(r => closeTab(r.id))
+      }
       treeItems.value = treeItems.value.filter(f => f.name !== id)
     } else {
+      closeTab(id)
       rootRequests.value = rootRequests.value.filter(r => r.id !== id)
       treeItems.value.forEach(f => {
         f.requests = f.requests.filter(r => r.id !== id)
       })
-      if (activeRequestId.value === id) {
-        activeRequestId.value = allRequests.value[0]?.id || ''
-      }
     }
   }
 
-  const closeTab = (tab: RequestItem) => {
-    if (openTabs.value.length === 1) return
-    const tabIndex = openTabs.value.findIndex(item => item.id === tab.id)
-    openTabs.value = openTabs.value.filter(item => item.id !== tab.id)
-    if (activeRequestId.value === tab.id) {
+  const closeTab = (id: string) => {
+    const tabIndex = openTabs.value.findIndex(item => item.id === id)
+    if (tabIndex === -1) return
+
+    openTabs.value = openTabs.value.filter(item => item.id !== id)
+    
+    if (activeRequestId.value === id) {
       const candidate = openTabs.value[Math.max(0, tabIndex - 1)] || openTabs.value[0]
       activeRequestId.value = candidate ? candidate.id : ''
     }
@@ -303,18 +352,37 @@ export function useWorkbench() {
     }
 
     loading.value = true
+    const { post } = useApiClient()
 
-    await new Promise(resolve => window.setTimeout(resolve, 260))
+    try {
+      const response = await post<WorkbenchResponse>('/execute', {
+        method: activeRequest.value.method,
+        url: `${requestTarget.value.baseUrl}${activeRequest.value.path}`,
+        headers: headers.value.filter(h => h.enabled && h.key),
+        queryParams: queryParams.value.filter(p => p.enabled && p.key),
+        body: requestBody.value,
+      })
 
-    const response = mockWorkbenchResponses[activeRequest.value.id] || mockWorkbenchResponse
-    responseData.value = {
-      ...structuredClone(response),
-      requestId: `req_${crypto.randomUUID().slice(0, 13)}`,
+      responseData.value = response
+    } catch (err: any) {
+      responseData.value = {
+        status: 0,
+        statusText: 'Error',
+        duration: 0,
+        size: '0',
+        ttfb: 0,
+        decoded: '',
+        executionTarget: '',
+        requestId: '',
+        headers: [],
+        body: err.message || 'An unknown error occurred',
+      }
+    } finally {
+      loading.value = false
     }
-    loading.value = false
   }
 
-  const appendWebSocketEvent = (event: Omit<WebSocketTimelineEvent, 'id' | 'timestamp'>) => {
+  const appendWebSocketEvent = (event: Omit<WebSocketTimelineEvent, 'id'>) => {
     webSocketEvents.value.unshift({
       id: crypto.randomUUID(),
       timestamp: new Date().toLocaleTimeString('en-GB', { hour12: false }),
@@ -327,69 +395,75 @@ export function useWorkbench() {
 
     loading.value = true
     webSocketState.value = 'connecting'
+    webSocketEvents.value = []
+    
     appendWebSocketEvent({
       direction: 'system',
       title: 'Opening backend websocket session',
       payload: `GET ${requestTarget.value.baseUrl}${activeRequest.value.path}\nUpgrade: websocket\nConnection: Upgrade`,
     })
 
-    await new Promise(resolve => window.setTimeout(resolve, 320))
-
-    webSocketState.value = 'connected'
-    loading.value = false
-    appendWebSocketEvent({
-      direction: 'system',
-      title: 'Connected through backend proxy',
-      payload: '101 Switching Protocols\nexecutionId: ws_mock_018f6c97',
-      sizeBytes: 54,
-    })
+    const { post } = useApiClient()
+    try {
+      const resp = await post<{ id: string }>('/execute/ws', {
+        method: activeRequest.value.method,
+        url: `${requestTarget.value.baseUrl}${activeRequest.value.path}`,
+        headers: headers.value.filter(h => h.enabled && h.key),
+      })
+      webSocketExecutionId.value = resp.id
+    } catch (err: any) {
+      webSocketState.value = 'error'
+      loading.value = false
+      appendWebSocketEvent({
+        direction: 'error',
+        title: 'Connection Failed',
+        payload: err.message || 'Could not initiate websocket session',
+      })
+    }
   }
 
   const closeWebSocketSession = async () => {
-    if (webSocketState.value !== 'connected') return
+    if (!webSocketExecutionId.value) return
 
     loading.value = true
     webSocketState.value = 'closing'
-    appendWebSocketEvent({
-      direction: 'system',
-      title: 'Closing websocket session',
-      payload: 'client requested close',
-    })
-
-    await new Promise(resolve => window.setTimeout(resolve, 180))
-
-    webSocketState.value = 'closed'
-    loading.value = false
-    appendWebSocketEvent({
-      direction: 'system',
-      title: 'Socket closed',
-      payload: 'code=1000 reason=normal closure',
-    })
+    
+    const { delete: del } = useApiClient()
+    try {
+      await del(`/execute/${webSocketExecutionId.value}`)
+    } catch (err: any) {
+      appendWebSocketEvent({
+        direction: 'error',
+        title: 'Closure Error',
+        payload: err.message,
+      })
+    } finally {
+      loading.value = false
+    }
   }
 
   const sendWebSocketMessage = async () => {
-    if (webSocketState.value !== 'connected') return
+    if (webSocketState.value !== 'connected' || !webSocketExecutionId.value) return
 
     const payload = webSocketMessage.value.trim()
-    appendWebSocketEvent({
-      direction: 'out',
-      title: 'Message sent',
-      payload,
-      sizeBytes: new Blob([payload]).size,
-    })
-
-    await new Promise(resolve => window.setTimeout(resolve, 240))
-
-    appendWebSocketEvent({
-      direction: 'in',
-      title: 'Message received',
-      payload: `{
-  "type": "pong",
-  "receivedAt": "${new Date().toISOString()}",
-  "echo": ${JSON.stringify(payload)}
-}`,
-      sizeBytes: 126,
-    })
+    const { post } = useApiClient()
+    
+    try {
+      await post(`/execute/${webSocketExecutionId.value}/ws/send`, { payload })
+      
+      appendWebSocketEvent({
+        direction: 'out',
+        title: 'Message sent',
+        payload,
+        sizeBytes: new Blob([payload]).size,
+      })
+    } catch (err: any) {
+      appendWebSocketEvent({
+        direction: 'error',
+        title: 'Send Error',
+        payload: err.message,
+      })
+    }
   }
 
   const addQueryParam = () => {

@@ -138,6 +138,24 @@ export function useAuthSession() {
       source.addEventListener('user.registered', (event) => {
         lastEvent.value = parseServerEvent('user.registered', event)
       })
+      source.addEventListener('ws.connected', (event) => {
+        lastEvent.value = parseServerEvent('ws.connected', event)
+      })
+      source.addEventListener('ws.message.in', (event) => {
+        lastEvent.value = parseServerEvent('ws.message.in', event)
+      })
+      source.addEventListener('ws.message.in.binary', (event) => {
+        lastEvent.value = parseServerEvent('ws.message.in.binary', event)
+      })
+      source.addEventListener('ws.message.out', (event) => {
+        lastEvent.value = parseServerEvent('ws.message.out', event)
+      })
+      source.addEventListener('ws.error', (event) => {
+        lastEvent.value = parseServerEvent('ws.error', event)
+      })
+      source.addEventListener('ws.closed', (event) => {
+        lastEvent.value = parseServerEvent('ws.closed', event)
+      })
       source.onerror = () => {
         source.close()
         if (eventSource.value === source) {

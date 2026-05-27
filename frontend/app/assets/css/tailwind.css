@@ -138,7 +138,38 @@
  }
 
  @layer utilities {
+  .custom-scrollbar::-webkit-scrollbar { width: 3px; height: 3px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--color-primary); opacity: 0.1; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+
+  .workbench-shadow {
+    box-shadow: 4px 4px 0 0 oklch(0.508 0.118 165.612 / 0.12);
+  }
+
+  .workbench-shadow-hover:hover {
+    box-shadow: 6px 6px 0 0 oklch(0.508 0.118 165.612 / 0.18);
+  }
+
+  .wb-active-indicator {
+   @apply absolute left-0 h-full w-[2px] bg-primary transition-all duration-300;
+  }
+
+  .btn-tactile {
+    @apply rounded-none border-2 transition-all duration-300 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none;
+  }
+
+  /* Exact 'Local' button style from navbar */
+  .btn-tactile-primary {
+    @apply rounded-none border-2 border-primary/20 bg-primary/3 text-primary transition-all duration-300 hover:border-primary/50 hover:bg-primary/10 hover:shadow-[3px_3px_0_0_rgba(16,185,129,0.1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none;
+  }
+
+  /* Exact 'Search Terminal' button style from navbar */
+  .btn-tactile-muted {
+    @apply rounded-none border-2 border-primary/10 bg-muted/20 text-muted-foreground transition-all duration-300 hover:border-primary/40 hover:bg-background hover:shadow-[4px_4px_0_0_rgba(16,185,129,0.2)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none;
+  }
+
   .border-subtle {
+
     border-image: linear-gradient(to bottom right,
         oklch(0.92 0.004 286.32) 0%,
         oklch(0.85 0.004 286.32) 100%) 1;

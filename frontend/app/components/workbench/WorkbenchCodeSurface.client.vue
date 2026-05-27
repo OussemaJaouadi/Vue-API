@@ -6,6 +6,7 @@ import {
   PhCode,
   PhCopy,
   PhTextT,
+  PhLightning,
 } from '@phosphor-icons/vue'
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
 import {
@@ -56,7 +57,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   language: 'json',
   editable: false,
-  label: 'Body',
+  label: 'Payload',
 })
 
 const emit = defineEmits<{
@@ -300,85 +301,92 @@ onBeforeUnmount(destroyEditor)
 </script>
 
 <template>
-  <div class="flex h-full min-h-0 flex-col overflow-hidden bg-card">
-    <div class="flex h-8 shrink-0 items-center justify-between border-b bg-muted/20 px-2">
-      <div class="flex items-center gap-2 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-        <component :is="language === 'json' ? PhBracketsCurly : PhTextT" class="size-3 text-primary" />
-        {{ label }}
+  <div class="flex h-full min-h-0 flex-col overflow-hidden bg-card select-none">
+    <div class="flex h-10 shrink-0 items-center justify-between border-b bg-muted/30 px-3">
+      <div class="flex items-center gap-3">
+        <div class="grid size-6 place-items-center border-2 border-primary/20 bg-primary/5 text-primary shadow-sm">
+          <component :is="language === 'json' ? PhBracketsCurly : PhTextT" class="size-3.5" />
+        </div>
+        <div class="min-w-0">
+          <span class="block font-mono text-[10px] font-black uppercase tracking-widest text-foreground/80 leading-none">{{ label }}</span>
+          <span class="mt-1 block font-mono text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40 leading-none">Code Surface / AST View</span>
+        </div>
       </div>
 
-      <div class="flex items-center gap-1">
-        <UiTooltip v-if="editable && language === 'json'">
-          <UiTooltipTrigger as-child>
-            <button
-              class="h-5 border border-border bg-background px-1.5 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
-              type="button"
-              @click="formatJson"
-            >
-              Format
-            </button>
-          </UiTooltipTrigger>
-          <UiTooltipContent side="bottom">Pretty print JSON</UiTooltipContent>
-        </UiTooltip>
+      <div class="flex items-center gap-2">
+        <div v-if="editable && language === 'json'" class="flex items-center gap-1 border-r border-border/20 pr-2 mr-1">
+          <UiTooltip>
+            <UiTooltipTrigger as-child>
+              <button
+                class="flex h-6 items-center gap-1.5 border-2 border-primary/10 bg-background px-2 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:border-primary/40 hover:text-primary active:scale-95"
+                type="button"
+                @click="formatJson"
+              >
+                <PhLightning class="size-3" />
+                Format
+              </button>
+            </UiTooltipTrigger>
+            <UiTooltipContent side="bottom" class="font-mono text-[9px] font-black uppercase">Pretty print JSON</UiTooltipContent>
+          </UiTooltip>
 
-        <UiTooltip v-if="editable && language === 'json'">
-          <UiTooltipTrigger as-child>
-            <button
-              class="h-5 border border-border bg-background px-1.5 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
-              type="button"
-              @click="minifyJson"
-            >
-              Minify
-            </button>
-          </UiTooltipTrigger>
-          <UiTooltipContent side="bottom">Compact JSON</UiTooltipContent>
-        </UiTooltip>
+          <UiTooltip>
+            <UiTooltipTrigger as-child>
+              <button
+                class="flex h-6 items-center border-2 border-primary/10 bg-background px-2 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:border-primary/40 hover:text-primary active:scale-95"
+                type="button"
+                @click="minifyJson"
+              >
+                Minify
+              </button>
+            </UiTooltipTrigger>
+            <UiTooltipContent side="bottom" class="font-mono text-[9px] font-black uppercase">Compact JSON</UiTooltipContent>
+          </UiTooltip>
+        </div>
 
         <UiTooltip>
           <UiTooltipTrigger as-child>
             <button
-              class="grid size-5 place-items-center border border-border bg-background text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              class="grid size-6 place-items-center border-2 border-primary/10 bg-background text-muted-foreground transition-all hover:border-primary/40 hover:text-primary active:scale-95"
               type="button"
               @click="copyCode"
             >
-              <PhCheck v-if="copied" class="size-3 text-primary" />
-              <PhCopy v-else class="size-3" />
+              <PhCheck v-if="copied" class="size-3.5 text-emerald-500" />
+              <PhCopy v-else class="size-3.5" />
             </button>
           </UiTooltipTrigger>
-          <UiTooltipContent side="bottom">{{ copied ? 'Copied' : 'Copy code' }}</UiTooltipContent>
+          <UiTooltipContent side="bottom" class="font-mono text-[9px] font-black uppercase">{{ copied ? 'Captured' : 'Copy context' }}</UiTooltipContent>
         </UiTooltip>
 
         <UiDropdownMenu>
           <UiDropdownMenuTrigger as-child>
             <button
-              aria-label="Syntax mode"
-              class="flex h-5 items-center gap-1.5 border border-border bg-background px-1.5 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+              class="flex h-6 items-center gap-2 border-2 border-primary/20 bg-primary/5 px-2 font-mono text-[9px] font-black uppercase tracking-widest text-primary transition-all hover:border-primary/50 active:scale-95 outline-none"
               type="button"
             >
               {{ language }}
-              <PhCaretDown class="size-2.5 opacity-50" />
+              <PhCaretDown class="size-3 opacity-70" />
             </button>
           </UiDropdownMenuTrigger>
-          <UiDropdownMenuContent align="end" class="w-44 rounded-none border-2 p-1">
+          <UiDropdownMenuContent align="end" class="w-48 rounded-none border-2 border-primary/20 bg-background p-1 shadow-[6px_6px_0_0_rgba(16,185,129,0.1)]">
             <UiDropdownMenuItem
               v-for="item in languages"
               :key="item.value"
-              class="group flex cursor-pointer items-center gap-2 rounded-none border border-transparent px-2 py-1.5 font-mono text-[10px] transition-colors focus:bg-primary/8"
-              :class="language === item.value ? 'border-primary/20 bg-primary/10 text-foreground' : 'text-muted-foreground hover:text-foreground'"
+              class="group flex cursor-pointer items-center gap-3 rounded-none border-l-2 border-transparent px-3 py-2 transition-all mb-0.5 last:mb-0 focus:bg-primary/10 focus:border-primary"
+              :class="language === item.value ? 'bg-primary/5 text-primary' : 'text-muted-foreground'"
               @click="emit('update:language', item.value)"
             >
-              <span class="flex size-5 shrink-0 items-center justify-center border border-border bg-background">
-                <component :is="item.icon" class="size-3" />
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="flex items-center gap-1.5">
-                  <span class="font-black uppercase tracking-widest">{{ item.label }}</span>
-                  <span class="h-1.5 w-1.5" :class="item.accentClass" />
-                </span>
-                <span class="block truncate text-[8px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              <div class="grid size-6 place-items-center border border-border/40 bg-muted/10">
+                <component :is="item.icon" class="size-3.5" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5 leading-none">
+                  <span class="font-mono text-[10px] font-black uppercase tracking-widest">{{ item.label }}</span>
+                  <div class="size-1 rounded-full" :class="item.accentClass" />
+                </div>
+                <span class="block truncate font-mono text-[8px] font-bold uppercase tracking-widest opacity-70 mt-1">
                   {{ item.description }}
                 </span>
-              </span>
+              </div>
               <PhCheck v-if="language === item.value" class="size-3 shrink-0 text-primary" />
             </UiDropdownMenuItem>
           </UiDropdownMenuContent>
