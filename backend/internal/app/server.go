@@ -53,7 +53,7 @@ func NewServer(ctx context.Context, cfg config.Config, logger *slog.Logger) (*Se
 	if err != nil {
 		return nil, err
 	}
-	if err := gormstorage.VerifySchema(db); err != nil {
+	if err := gormstorage.Migrate(db); err != nil {
 		return nil, err
 	}
 	logger.Info("database ready", "driver", cfg.Database.Driver)
