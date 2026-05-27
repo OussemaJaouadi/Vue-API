@@ -5,7 +5,7 @@ export function useWorkspace() {
 
   const workspaces = useState<Workspace[]>('workspaces', () => [])
   const currentWorkspaceId = useState<string>('workspace:id', () => '')
-  const workspacesLoading = useState<boolean>('workspaces:loading', () => true)
+  const workspacesLoading = useState<boolean>('workspaces:loading', () => false)
 
   const currentWorkspace = computed(() =>
     workspaces.value.find(w => w.id === currentWorkspaceId.value) ?? workspaces.value[0]
@@ -47,7 +47,7 @@ export function useWorkspace() {
     }
   })
 
-  if (workspaces.value.length === 0) {
+  if (workspaces.value.length === 0 && !workspacesLoading.value) {
     loadWorkspaces()
   }
 
