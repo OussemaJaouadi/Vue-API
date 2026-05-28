@@ -4,7 +4,9 @@ import {
   PhCheck,
   PhPencilSimple,
   PhPlus,
+  PhShieldCheck,
   PhTrash,
+  PhUsersThree,
   PhWarning,
   PhX,
 } from '@phosphor-icons/vue'
@@ -30,6 +32,11 @@ const deleteTarget = ref<Workspace | null>(null)
 const actionError = ref<string | null>(null)
 
 const sortedWorkspaces = computed(() => workspaces.value)
+const selectedWorkspace = computed(() =>
+  sortedWorkspaces.value.find(workspace => workspace.id === currentWorkspaceId.value) ?? sortedWorkspaces.value[0],
+)
+const selectedRole = computed(() => selectedWorkspace.value?.role || 'member')
+const selectedMembers = computed(() => selectedWorkspace.value?.memberCount ?? 0)
 
 const beginRename = (workspace: Workspace) => {
   actionError.value = null
@@ -89,172 +96,251 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-[calc(100dvh-5.5rem)] border bg-card">
-    <header class="flex h-14 items-center justify-between border-b bg-muted/20 px-4">
-      <div class="flex min-w-0 items-center gap-3">
-        <div class="grid size-8 place-items-center border-2 border-primary/25 bg-primary/10 text-primary">
-          <PhBuildings class="size-4" />
+  <div class="flex h-[calc(100dvh-5.5rem)] flex-col overflow-hidden border bg-card">
+    <header class="flex h-16 shrink-0 items-center justify-between border-b bg-muted/30 px-6 select-none">
+      <div class="flex items-center gap-4">
+        <div class="grid size-10 place-items-center border-2 border-primary bg-primary/10 text-primary shadow-[3px_3px_0_0_rgba(16,185,129,0.15)] transition-transform hover:scale-105">
+          <PhBuildings class="size-5" />
         </div>
-        <div class="min-w-0">
-          <h1 class="truncate font-heading text-base font-bold">Workspaces</h1>
-          <p class="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            CRUD / membership boundary
+        <div>
+          <h1 class="font-heading text-lg font-black uppercase tracking-tight text-foreground">Workspaces</h1>
+          <p class="font-mono text-[10px] font-black uppercase tracking-widest text-primary/60">
+            Selected Context: {{ selectedWorkspace?.name ?? 'None' }}
           </p>
         </div>
       </div>
 
-      <UiButton
-        class="rounded-none border-2 border-primary/25 bg-primary/5 font-mono text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10"
+      <button
+        class="btn-tactile-primary flex h-9 items-center gap-2 px-4 font-mono text-[10px] font-black uppercase tracking-widest outline-none"
         type="button"
-        variant="ghost"
         @click="createOpen = true"
       >
-        <PhPlus class="mr-2 size-4" />
-        Workspace
-      </UiButton>
+        <PhPlus class="size-3.5" />
+        <span class="hidden sm:inline">New Workspace</span>
+        <span class="sm:hidden">New</span>
+      </button>
     </header>
 
-    <div class="grid gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <section class="border bg-background">
-        <div class="flex items-center justify-between border-b bg-muted/15 px-4 py-3">
-          <div>
-            <h2 class="font-mono text-[11px] font-black uppercase tracking-widest">Workspace registry</h2>
-            <p class="mt-1 text-sm text-muted-foreground">Switch, rename, or remove isolated project spaces.</p>
-          </div>
-          <span class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-            {{ workspaces.length }} total
+    <div class="flex min-w-0 flex-1 gap-3 overflow-x-auto bg-muted/5 p-3">
+      <aside class="flex w-64 shrink-0 select-none flex-col overflow-hidden border-r bg-card/30">
+        <div class="flex h-10 shrink-0 items-center justify-between border-b bg-muted/30 px-3">
+          <span class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground">Registry</span>
+          <span v-if="!workspacesLoading" class="font-mono text-[9px] font-black uppercase tracking-widest text-primary/40">
+            {{ workspaces.length }} nodes
           </span>
+          <div v-else class="h-2 w-12 animate-pulse bg-muted-foreground/15" />
         </div>
 
-        <div v-if="workspacesLoading" class="grid gap-2 p-4">
-          <div v-for="idx in 4" :key="idx" class="h-20 animate-pulse border bg-muted/20" />
-        </div>
-
-        <div v-else-if="workspacesError" class="m-4 border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-          {{ workspacesError }}
-        </div>
-
-        <div v-else-if="sortedWorkspaces.length === 0" class="grid min-h-80 place-items-center p-6 text-center">
-          <div class="max-w-sm">
-            <div class="mx-auto grid size-12 place-items-center border-2 border-primary/25 bg-primary/10 text-primary">
-              <PhBuildings class="size-6" />
+        <div class="custom-scrollbar flex-1 space-y-0.5 overflow-y-auto p-1">
+          <template v-if="workspacesLoading">
+            <div v-for="idx in 3" :key="idx" class="flex h-14 w-full items-center gap-3 px-3">
+              <div class="flex-1 space-y-1.5">
+                <div class="h-3 w-24 animate-pulse bg-muted-foreground/15" />
+                <div class="h-2 w-14 animate-pulse bg-muted-foreground/10" />
+              </div>
             </div>
-            <h3 class="mt-4 font-heading text-lg font-bold">No workspaces</h3>
-            <p class="mt-2 text-sm text-muted-foreground">Create one to unlock collections, environments, access grants, and execution history.</p>
-            <UiButton
-              class="mt-4 rounded-none"
+          </template>
+
+          <button
+            v-for="workspace in sortedWorkspaces"
+            :key="workspace.id"
+            class="group relative flex h-14 w-full shrink-0 items-center justify-between px-3 outline-none transition-all duration-200"
+            :class="workspace.id === currentWorkspaceId ? 'bg-primary/10 text-foreground' : 'text-muted-foreground/70 hover:bg-primary/5 hover:text-foreground'"
+            type="button"
+            @click="currentWorkspaceId = workspace.id"
+          >
+            <div v-if="workspace.id === currentWorkspaceId" class="wb-active-indicator" />
+
+            <div class="min-w-0 flex-1 text-left">
+              <span
+                class="block truncate font-mono text-[11px] font-black uppercase tracking-tight transition-colors"
+                :class="workspace.id === currentWorkspaceId ? 'text-primary' : 'group-hover:text-foreground'"
+              >
+                {{ workspace.name }}
+              </span>
+              <span class="mt-1 inline-block border border-border/60 px-1 py-0.5 font-mono text-[8px] font-black uppercase tracking-tighter text-muted-foreground/80">
+                {{ workspace.role || 'member' }}
+              </span>
+            </div>
+
+            <div v-if="workspace.id === currentWorkspaceId" class="size-1.5 animate-pulse bg-primary/40" />
+          </button>
+
+          <div v-if="!workspacesLoading && sortedWorkspaces.length === 0" class="flex flex-col items-center gap-3 px-4 pt-10 text-center">
+            <span class="font-mono text-[10px] italic text-muted-foreground/40">No workspaces yet</span>
+          </div>
+        </div>
+      </aside>
+
+      <template v-if="workspacesLoading">
+        <div class="flex flex-1 items-center justify-center">
+          <div class="flex flex-col items-center gap-4 opacity-40">
+            <div class="size-12 animate-spin border-4 border-primary/20 border-t-primary" />
+            <span class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading workspaces...</span>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="workspacesError">
+        <div class="flex flex-1 items-center justify-center">
+          <div class="flex flex-col items-center gap-4 px-8 text-center">
+            <div class="grid size-16 place-items-center border-2 border-dashed border-destructive/30 bg-destructive/5 text-destructive/40">
+              <PhWarning class="size-8" />
+            </div>
+            <div>
+              <h3 class="font-mono text-[13px] font-black uppercase tracking-tight text-destructive">Failed to Load</h3>
+              <p class="mt-1 max-w-xs font-mono text-[10px] text-muted-foreground/60">{{ workspacesError }}</p>
+            </div>
+            <button
+              class="flex h-10 items-center gap-2 border-2 border-destructive/30 bg-destructive/8 px-4 font-mono text-[10px] font-black uppercase tracking-widest text-destructive transition-all hover:bg-destructive/15"
+              type="button"
+              @click="loadWorkspaces()"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="sortedWorkspaces.length === 0 || !selectedWorkspace">
+        <div class="flex flex-1 items-center justify-center">
+          <div class="flex flex-col items-center gap-4 px-8 text-center">
+            <div class="grid size-16 place-items-center border-2 border-dashed border-muted-foreground/30 bg-muted/10 text-muted-foreground/40">
+              <PhBuildings class="size-8" />
+            </div>
+            <div>
+              <h3 class="font-mono text-[13px] font-black uppercase tracking-tight text-muted-foreground">No Workspaces Yet</h3>
+              <p class="mt-1 font-mono text-[10px] text-muted-foreground/60">Create a workspace to unlock collections, environments, access grants, and execution history.</p>
+            </div>
+            <button
+              class="flex h-10 items-center gap-2 border-2 border-primary/30 bg-primary/8 px-4 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:bg-primary/15 hover:shadow-[3px_3px_0_0_rgba(16,185,129,0.12)] active:translate-x-0.5 active:translate-y-0.5"
               type="button"
               @click="createOpen = true"
             >
-              <PhPlus class="mr-2 size-4" />
-              Create workspace
-            </UiButton>
+              <PhPlus class="size-4" />
+              Create Workspace
+            </button>
           </div>
         </div>
+      </template>
 
-        <div v-else class="divide-y">
-          <article
-            v-for="workspace in sortedWorkspaces"
-            :key="workspace.id"
-            class="grid gap-3 p-4 transition-colors md:grid-cols-[minmax(0,1fr)_auto]"
-            :class="workspace.id === currentWorkspaceId ? 'bg-primary/6' : 'hover:bg-muted/20'"
-          >
-            <div class="min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                <button
-                  class="grid size-8 place-items-center border transition-colors"
-                  :class="workspace.id === currentWorkspaceId ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/40 hover:text-primary'"
-                  type="button"
-                  @click="currentWorkspaceId = workspace.id"
-                >
-                  <PhCheck v-if="workspace.id === currentWorkspaceId" class="size-4" />
-                  <PhBuildings v-else class="size-4" />
-                </button>
+      <template v-else>
+        <section class="flex min-w-[520px] flex-1 flex-col overflow-hidden border bg-background">
+          <div class="flex h-10 shrink-0 items-center justify-between border-b bg-muted/30 px-3">
+            <div class="flex min-w-0 items-center gap-2">
+              <PhShieldCheck class="size-4 text-primary" />
+              <span class="truncate font-mono text-[10px] font-black uppercase tracking-widest">
+                Workspace Control
+              </span>
+            </div>
+            <span class="font-mono text-[9px] font-black uppercase tracking-widest text-primary/60">
+              Active Boundary
+            </span>
+          </div>
 
+          <div class="custom-scrollbar flex-1 overflow-y-auto p-6">
+            <div class="mx-auto max-w-3xl space-y-4">
+              <div class="border-2 border-primary/15 bg-primary/5 p-4 shadow-[4px_4px_0_0_rgba(16,185,129,0.08)]">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                  <div class="min-w-0">
+                    <span class="font-mono text-[9px] font-black uppercase tracking-widest text-primary/70">Selected workspace</span>
+                    <h2 class="mt-1 truncate font-heading text-2xl font-black">{{ selectedWorkspace.name }}</h2>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                      <span class="border border-primary/25 bg-background/60 px-2 py-1 font-mono text-[9px] font-black uppercase tracking-widest text-primary">
+                        {{ selectedRole }}
+                      </span>
+                      <span class="border border-border/70 bg-background/60 px-2 py-1 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                        {{ selectedMembers }} members
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    class="flex h-9 items-center gap-2 border-2 border-primary/30 bg-primary/8 px-3 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:bg-primary/15 hover:shadow-[3px_3px_0_0_rgba(16,185,129,0.12)] active:translate-x-0.5 active:translate-y-0.5"
+                    type="button"
+                    @click="currentWorkspaceId = selectedWorkspace.id"
+                  >
+                    <PhCheck class="size-4" />
+                    Active
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid gap-3 md:grid-cols-2">
                 <form
-                  v-if="editingId === workspace.id"
-                  class="flex min-w-0 flex-1 items-center gap-2"
-                  @submit.prevent="saveRename(workspace)"
+                  class="border bg-muted/10 p-4"
+                  @submit.prevent="saveRename(selectedWorkspace)"
                 >
+                  <div class="mb-3 flex items-center gap-2">
+                    <PhPencilSimple class="size-4 text-primary" />
+                    <h3 class="font-mono text-[11px] font-black uppercase tracking-widest">Rename</h3>
+                  </div>
                   <input
                     v-model="editingName"
-                    class="h-9 min-w-0 flex-1 rounded-none border-2 border-primary/20 bg-background px-3 font-mono text-sm font-bold outline-none focus:border-primary"
+                    class="h-11 w-full rounded-none border-2 border-primary/10 bg-background/50 px-3 font-mono text-sm outline-none transition-all placeholder:text-muted-foreground/70 hover:border-primary/40 hover:bg-background focus:border-primary"
+                    :placeholder="selectedWorkspace.name"
                     type="text"
+                    @focus="beginRename(selectedWorkspace)"
                   >
-                  <UiButton class="rounded-none" size="sm" type="submit" :disabled="savingId === workspace.id">
-                    {{ savingId === workspace.id ? 'Saving' : 'Save' }}
-                  </UiButton>
-                  <UiButton class="rounded-none" size="icon-sm" type="button" variant="ghost" @click="cancelRename">
-                    <PhX class="size-4" />
-                  </UiButton>
+                  <button
+                    class="mt-3 flex h-9 w-full items-center justify-center gap-2 border-2 border-primary/30 bg-primary/8 px-4 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:bg-primary/15 hover:shadow-[3px_3px_0_0_rgba(16,185,129,0.12)] active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50"
+                    :disabled="savingId === selectedWorkspace.id"
+                    type="submit"
+                  >
+                    {{ savingId === selectedWorkspace.id ? 'Saving...' : 'Save name' }}
+                  </button>
                 </form>
 
-                <template v-else>
+                <div class="border border-destructive/25 bg-destructive/5 p-4">
+                  <div class="mb-3 flex items-center gap-2">
+                    <PhTrash class="size-4 text-destructive" />
+                    <h3 class="font-mono text-[11px] font-black uppercase tracking-widest text-destructive">Danger</h3>
+                  </div>
+                  <p class="min-h-11 text-sm leading-5 text-muted-foreground">
+                    Delete removes this workspace and all scoped collections, requests, environments, variables, memberships, and grants.
+                  </p>
                   <button
-                    class="min-w-0 text-left"
+                    class="mt-3 flex h-9 w-full items-center justify-center gap-2 border-2 border-destructive/30 bg-destructive/8 px-4 font-mono text-[10px] font-black uppercase tracking-widest text-destructive transition-all hover:bg-destructive/15 hover:shadow-[3px_3px_0_0_rgba(239,68,68,0.12)] active:translate-x-0.5 active:translate-y-0.5"
                     type="button"
-                    @click="currentWorkspaceId = workspace.id"
+                    @click="requestDelete(selectedWorkspace)"
                   >
-                    <span class="block truncate font-heading text-sm font-bold">{{ workspace.name }}</span>
-                    <span class="block font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                      {{ workspace.role || 'member' }} / {{ workspace.memberCount ?? 0 }} members
-                    </span>
+                    <PhTrash class="size-4" />
+                    Delete workspace
                   </button>
-                  <span
-                    v-if="workspace.id === currentWorkspaceId"
-                    class="border border-primary/25 bg-primary/10 px-2 py-1 font-mono text-[9px] font-black uppercase tracking-widest text-primary"
-                  >
-                    Active
-                  </span>
-                </template>
+                </div>
               </div>
-            </div>
 
-            <div class="flex items-center gap-2 md:justify-end">
-              <UiButton
-                class="rounded-none"
-                size="icon-sm"
-                type="button"
-                variant="outline"
-                @click="beginRename(workspace)"
-              >
-                <PhPencilSimple class="size-4" />
-              </UiButton>
-              <UiButton
-                class="rounded-none border-destructive/30 text-destructive hover:bg-destructive/10"
-                size="icon-sm"
-                type="button"
-                variant="outline"
-                @click="requestDelete(workspace)"
-              >
-                <PhTrash class="size-4" />
-              </UiButton>
+              <p v-if="actionError" class="border border-destructive/30 bg-destructive/10 px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-widest text-destructive">
+                {{ actionError }}
+              </p>
             </div>
-          </article>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      <aside class="border bg-background">
-        <div class="border-b bg-muted/15 px-4 py-3">
-          <h2 class="font-mono text-[11px] font-black uppercase tracking-widest">Current boundary</h2>
-          <p class="mt-1 text-sm text-muted-foreground">Everything below this workspace is scoped.</p>
-        </div>
-        <div class="space-y-3 p-4">
-          <div class="border bg-muted/15 p-3">
-            <span class="font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">Active workspace</span>
-            <p class="mt-1 truncate font-heading text-base font-bold">{{ currentWorkspace?.name ?? 'None' }}</p>
+        <aside class="flex w-72 shrink-0 flex-col overflow-hidden border bg-background">
+          <div class="flex h-10 shrink-0 items-center justify-between border-b bg-muted/30 px-3">
+            <span class="font-mono text-[10px] font-black uppercase tracking-widest">Access Snapshot</span>
+            <PhUsersThree class="size-4 text-primary" />
           </div>
-          <div class="border bg-muted/15 p-3">
-            <span class="font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">Delete behavior</span>
-            <p class="mt-1 text-sm leading-5 text-muted-foreground">
-              Removing a workspace also removes its collections, requests, environments, variables, memberships, and access grants.
-            </p>
+          <div class="space-y-3 p-4">
+            <div class="border bg-muted/15 p-3">
+              <span class="font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">Role</span>
+              <p class="mt-1 font-mono text-lg font-black uppercase text-primary">{{ selectedRole }}</p>
+            </div>
+            <div class="border bg-muted/15 p-3">
+              <span class="font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">Members</span>
+              <p class="mt-1 font-mono text-lg font-black uppercase text-primary">{{ selectedMembers }}</p>
+            </div>
+            <NuxtLink
+              class="flex h-10 items-center justify-center gap-2 border-2 border-primary/30 bg-primary/8 px-4 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:bg-primary/15 hover:shadow-[3px_3px_0_0_rgba(16,185,129,0.12)] active:translate-x-0.5 active:translate-y-0.5"
+              to="/access"
+            >
+              <PhUsersThree class="size-4" />
+              Manage access
+            </NuxtLink>
           </div>
-          <p v-if="actionError" class="border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-            {{ actionError }}
-          </p>
-        </div>
-      </aside>
+        </aside>
+      </template>
     </div>
 
     <Teleport to="body">

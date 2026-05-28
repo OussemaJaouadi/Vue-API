@@ -76,21 +76,23 @@ const handleCreate = async () => {
       </div>
 
       <SheetFooter class="border-t bg-muted/30 p-6">
-        <div class="flex w-full gap-3">
+        <div class="grid w-full gap-4 sm:grid-cols-2">
           <button
-            class="flex h-10 flex-1 items-center justify-center border-2 border-border/40 bg-background px-4 font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground transition-all hover:border-destructive/40 hover:bg-destructive/5 hover:text-destructive active:translate-x-0.5 active:translate-y-0.5"
-            type="button"
-            @click="emit('update:open', false)"
-          >
-            Cancel
-          </button>
-          <button
-            class="flex h-10 flex-1 items-center justify-center border-2 border-primary/20 bg-primary/5 px-4 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:border-primary/50 hover:bg-primary/10 hover:shadow-[4px_4px_0_0_rgba(16,185,129,0.15)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-50"
+            class="group relative flex h-12 items-center justify-center gap-3 rounded-none border-2 border-primary/20 bg-primary/3 px-4 text-primary transition-all hover:border-primary/50 hover:bg-primary/10 hover:shadow-[4px_4px_0_0_rgba(16,185,129,0.15)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
             :disabled="!name.trim() || loading"
+            :class="(!name.trim() || loading) && 'opacity-50 cursor-not-allowed'"
             type="button"
             @click="handleCreate"
           >
-            {{ loading ? 'Creating...' : 'Create' }}
+            <span class="font-mono text-[10px] font-black uppercase tracking-widest">{{ loading ? 'Creating...' : 'Create Workspace' }}</span>
+          </button>
+
+          <button
+            class="group relative flex h-12 items-center justify-center gap-3 rounded-none border-2 border-primary/10 bg-muted/20 px-4 text-muted-foreground transition-all hover:border-primary/40 hover:bg-background hover:shadow-[4px_4px_0_0_rgba(16,185,129,0.1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+            type="button"
+            @click="emit('update:open', false)"
+          >
+            <span class="font-mono text-[10px] font-black uppercase tracking-widest">Cancel</span>
           </button>
         </div>
       </SheetFooter>
