@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PhCheck, PhLockKey, PhShieldCheck } from '@phosphor-icons/vue'
-import { type AccessLevel, type AccessUser, accessTone } from '~/types/access'
+import { type AccessLevel, type AccessUser, type DeniedTarget, type GrantTarget, accessTone } from '~/types/access'
 
 const props = defineProps<{
   user: AccessUser
@@ -9,15 +9,11 @@ const props = defineProps<{
     meta: string
     level: AccessLevel
   }>
-  deniedTargets: Array<{
-    section: string
-    name: string
-    level: AccessLevel
-  }>
+  deniedTargets: DeniedTarget[]
 }>()
 
 const emit = defineEmits<{
-  (e: 'resolveDenied', section: string, name: string): void
+  (e: 'resolveDenied', target: GrantTarget, id: string): void
 }>()
 </script>
 
@@ -83,7 +79,7 @@ const emit = defineEmits<{
         <div v-if="deniedTargets.length" class="grid gap-2">
           <div
             v-for="target in deniedTargets"
-            :key="`${target.section}-${target.name}`"
+            :key="`${target.target}-${target.id}`"
             class="group grid grid-cols-[minmax(0,1fr)_72px] gap-3 border border-dashed border-border/40 px-2 py-2 transition-all duration-300 hover:border-primary/30 hover:bg-primary/[0.01]"
           >
             <span class="min-w-0">
@@ -93,7 +89,7 @@ const emit = defineEmits<{
             <button
               class="h-7 border-2 border-primary/20 bg-primary/5 px-2 font-mono text-[8px] font-black uppercase tracking-widest text-primary transition-all duration-300 hover:bg-primary/20 hover:shadow-sm active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
               type="button"
-              @click="emit('resolveDenied', target.section, target.name)"
+              @click="emit('resolveDenied', target.target, target.id)"
             >
               Grant
             </button>

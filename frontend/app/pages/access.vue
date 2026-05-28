@@ -20,12 +20,13 @@ const {
   kickUser,
   updateGrant,
   resolveDenied,
+  loadUsers,
 } = useAccess()
 
 const inviteOpen = ref(false)
 
 const roleOptions = [
-  { value: 'manager', label: 'Manager' },
+  { value: 'admin', label: 'Admin' },
   { value: 'developer', label: 'Developer' },
   { value: 'tester', label: 'Tester' },
 ]

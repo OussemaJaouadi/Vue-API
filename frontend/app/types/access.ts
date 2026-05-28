@@ -15,6 +15,28 @@ export interface AccessUser {
   }
 }
 
+export interface GrantRow {
+  id: string
+  name: string
+  meta: string
+  level: AccessLevel
+}
+
+export interface GrantSection {
+  key: GrantTarget
+  label: string
+  icon: any
+  rows: GrantRow[]
+}
+
+export interface DeniedTarget {
+  target: GrantTarget
+  id: string
+  section: string
+  name: string
+  level: AccessLevel
+}
+
 export const accessWeight: Record<AccessLevel, number> = {
   none: 0,
   read: 1,
@@ -35,4 +57,3 @@ export const roleTone = (role: string) => {
   if (r.includes('developer')) return 'border-sky-500/50 bg-sky-500/10 text-sky-600 dark:text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.12)]'
   return 'border-teal-500/50 bg-teal-500/10 text-teal-600 dark:text-teal-400 shadow-[0_0_15px_rgba(20,184,166,0.12)]'
 }
-

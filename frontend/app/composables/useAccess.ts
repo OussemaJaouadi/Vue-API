@@ -9,7 +9,7 @@ const accessWeight: Record<AccessLevel, number> = {
 }
 
 export function useAccess() {
-  const { get } = useApiClient()
+  const { get, put, delete: del } = useApiClient()
   const workbench = useWorkbench()
   const { environments } = useEnvironments()
 
@@ -22,6 +22,33 @@ export function useAccess() {
 
   const workspaceId = useState<string>('workspace:id', () => '')
   const workspacesLoading = useState<boolean>('workspaces:loading', () => false)
+
+  const serializeGrants = (user: AccessUser) => {
+    const entries: Array<{ resourceType: GrantTarget, grants: Record<string, AccessLevel> }> = [
+      { resourceType: 'collection', grants: user.grants.collections },
+      { resourceType: 'environment', grants: user.grants.environments },
+      { resourceType: 'secret', grants: user.grants.secrets },
+    ]
+
+    return entries.flatMap(entry =>
+      Object.entries(entry.grants)
+        .filter(([, accessLevel]) => accessLevel !== 'none')
+        .map(([resourceId, accessLevel]) => ({
+          resourceType: entry.resourceType,
+          resourceId,
+          accessLevel,
+        })),
+    )
+  }
+
+  const persistGrants = async (user: AccessUser) => {
+    const wid = workspaceId.value
+    if (!wid) return
+
+    await put(`/v1/workspaces/${wid}/members/${user.id}/grants`, {
+      grants: serializeGrants(user),
+    })
+  }
 
   const loadGrantsForUser = async (userId: string) => {
     const wid = workspaceId.value
@@ -71,6 +98,7 @@ export function useAccess() {
 
   const collectionEntries = computed(() =>
     workbench.treeItems.value.map(group => ({
+      id: group.id ?? group.name,
       name: group.name,
       requests: group.requests.length,
       defaultEnvironment: environments.value[0]?.name ?? '—',
@@ -79,6 +107,7 @@ export function useAccess() {
 
   const environmentEntries = computed(() =>
     environments.value.map((env: any) => ({
+      id: env.id,
       name: env.name,
       visibility: env.visibility,
       variables: env.variables?.length ?? 0,
@@ -86,48 +115,81 @@ export function useAccess() {
     }))
   )
 
-  const updateRole = (role: string) => {
+  const updateRole = async (role: string) => {
     if (!selectedUser.value) return
+    const wid = workspaceId.value
+    if (!wid) return
+
+    const previousRole = selectedUser.value.role
     selectedUser.value.role = role
     selectedUser.value.inheritedFrom = `project ${role}`
+
+    try {
+      await put(`/v1/workspaces/${wid}/members/${selectedUser.value.id}`, { role })
+    } catch (err) {
+      selectedUser.value.role = previousRole
+      selectedUser.value.inheritedFrom = ''
+      console.error('Failed to update member role', err)
+    }
   }
 
-  const kickUser = (id: string) => {
+  const kickUser = async (id: string) => {
+    const wid = workspaceId.value
+    if (!wid) return
+
+    try {
+      await del(`/v1/workspaces/${wid}/members/${id}`)
+    } catch (err) {
+      console.error('Failed to remove workspace member', err)
+      return
+    }
+
     users.value = users.value.filter(user => user.id !== id)
     if (selectedUserId.value === id) {
       selectedUserId.value = users.value[0]?.id ?? ''
     }
   }
 
-  const updateGrant = (target: GrantTarget, name: string, level: AccessLevel) => {
+  const updateGrant = async (target: GrantTarget, id: string, level: AccessLevel) => {
     if (!selectedUser.value) return
+    const user = selectedUser.value
+    let grants: Record<string, AccessLevel>
     if (target === 'collection') {
-      selectedUser.value.grants.collections[name] = level
+      grants = user.grants.collections
     }
     else if (target === 'environment') {
-      selectedUser.value.grants.environments[name] = level
+      grants = user.grants.environments
     }
     else if (target === 'secret') {
-      selectedUser.value.grants.secrets[name] = level
+      grants = user.grants.secrets
+    }
+    else {
+      return
+    }
+
+    const previousLevel = grants[id]
+    grants[id] = level
+
+    try {
+      await persistGrants(user)
+    } catch (err) {
+      if (previousLevel) {
+        grants[id] = previousLevel
+      } else {
+        delete grants[id]
+      }
+      console.error('Failed to update grants', err)
     }
   }
 
-  const resolveDenied = (section: string, name: string) => {
-    const targetMap: Record<string, GrantTarget> = {
-      Collections: 'collection',
-      Environments: 'environment',
-      Secrets: 'secret',
-    }
-    const target = targetMap[section]
-    if (target) {
-      updateGrant(target, name, 'read')
-    }
+  const resolveDenied = (target: GrantTarget, id: string) => {
+    updateGrant(target, id, 'read')
   }
 
-  const canExecute = (collectionName: string, environmentName: string) => {
+  const canExecute = (collectionId: string, environmentId: string) => {
     if (!selectedUser.value) return false
-    const collectionLevel = selectedUser.value.grants.collections[collectionName] ?? 'none'
-    const environmentLevel = selectedUser.value.grants.environments[environmentName] ?? 'none'
+    const collectionLevel = selectedUser.value.grants.collections[collectionId] ?? 'none'
+    const environmentLevel = selectedUser.value.grants.environments[environmentId] ?? 'none'
     return accessWeight[collectionLevel] > 0 && accessWeight[environmentLevel] > 0
   }
 
@@ -139,9 +201,10 @@ export function useAccess() {
         label: 'Collections',
         icon: PhFolderOpen,
         rows: collectionEntries.value.map(collection => ({
+          id: collection.id,
           name: collection.name,
           meta: `${collection.requests} requests / default ${collection.defaultEnvironment}`,
-          level: selectedUser.value!.grants.collections[collection.name] ?? 'none',
+          level: selectedUser.value!.grants.collections[collection.id] ?? 'none',
         })),
       },
       {
@@ -149,9 +212,10 @@ export function useAccess() {
         label: 'Environments',
         icon: PhDatabase,
         rows: environmentEntries.value.map(environment => ({
+          id: environment.id,
           name: environment.name,
           meta: `${environment.visibility} / ${environment.variables} variables`,
-          level: selectedUser.value!.grants.environments[environment.name] ?? 'none',
+          level: selectedUser.value!.grants.environments[environment.id] ?? 'none',
         })),
       },
       {
@@ -159,9 +223,10 @@ export function useAccess() {
         label: 'Secrets',
         icon: PhKey,
         rows: environmentEntries.value.map(environment => ({
+          id: environment.id,
           name: environment.name,
           meta: `${environment.secrets} masked value${environment.secrets === 1 ? '' : 's'}`,
-          level: selectedUser.value!.grants.secrets[environment.name] ?? 'none',
+          level: selectedUser.value!.grants.secrets[environment.id] ?? 'none',
         })),
       },
     ]
@@ -170,17 +235,17 @@ export function useAccess() {
   const executionRows = computed(() =>
     collectionEntries.value.flatMap(collection => environmentEntries.value.map(environment => ({
       name: `${collection.name} -> ${environment.name}`,
-      meta: canExecute(collection.name, environment.name) ? 'Access match' : 'Missing grant',
-      level: (canExecute(collection.name, environment.name) ? 'read' : 'none') as AccessLevel,
+      meta: canExecute(collection.id, environment.id) ? 'Access match' : 'Missing grant',
+      level: (canExecute(collection.id, environment.id) ? 'read' : 'none') as AccessLevel,
     }))),
   )
 
   const deniedTargets = computed(() => {
-    const targets: Array<{ section: string, name: string, level: AccessLevel }> = []
+    const targets: Array<{ target: GrantTarget, id: string, section: string, name: string, level: AccessLevel }> = []
     grantSections.value.forEach((section) => {
       section.rows.forEach((row) => {
         if (row.level === 'none') {
-          targets.push({ section: section.label, name: row.name, level: row.level })
+          targets.push({ target: section.key, id: row.id, section: section.label, name: row.name, level: row.level })
         }
       })
     })

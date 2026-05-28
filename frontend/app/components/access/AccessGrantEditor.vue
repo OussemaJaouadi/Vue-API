@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { PhCaretDown, PhUserMinus } from '@phosphor-icons/vue'
-import { type AccessLevel, type AccessUser, type GrantTarget, accessTone, roleTone } from '~/types/access'
+import { type AccessLevel, type AccessUser, type GrantSection, type GrantTarget, accessTone, roleTone } from '~/types/access'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,22 +11,13 @@ import {
 const props = defineProps<{
   user: AccessUser
   roleOptions: Array<{ value: string, label: string }>
-  sections: Array<{
-    key: GrantTarget
-    label: string
-    icon: any
-    rows: Array<{
-      name: string
-      meta: string
-      level: AccessLevel
-    }>
-  }>
+  sections: GrantSection[]
   accessOptions: Array<{ value: AccessLevel, label: string }>
 }>()
 
 const emit = defineEmits<{
   (e: 'updateRole', role: string): void
-  (e: 'updateGrant', target: GrantTarget, name: string, level: AccessLevel): void
+  (e: 'updateGrant', target: GrantTarget, id: string, level: AccessLevel): void
   (e: 'kickUser', id: string): void
 }>()
 
@@ -107,7 +98,7 @@ const getRoleLabel = (value: string) => props.roleOptions.find(opt => opt.value 
         <div class="divide-y divide-border/20">
           <div
             v-for="row in section.rows"
-            :key="`${section.key}-${row.name}`"
+            :key="`${section.key}-${row.id}`"
             class="group grid min-h-14 grid-cols-[minmax(0,1fr)_128px] items-center gap-4 px-4 py-2 transition-all duration-200 hover:bg-primary/[0.02]"
           >
             <div class="min-w-0">
@@ -139,7 +130,7 @@ const getRoleLabel = (value: string) => props.roleOptions.find(opt => opt.value 
                     option.value === 'read' ? 'focus:bg-emerald-500/10 focus:text-emerald-600 focus:border-emerald-500/60' :
                     'focus:bg-destructive/10 focus:text-destructive focus:border-destructive/60'
                   ]"
-                  @select="emit('updateGrant', section.key, row.name, option.value)"
+                  @select="emit('updateGrant', section.key, row.id, option.value)"
                 >
                   {{ option.label }}
                 </DropdownMenuItem>
