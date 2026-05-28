@@ -176,6 +176,45 @@ const requestFromApi = (r: any): RequestItem => ({
   },
 })
 
+const encodeBasicToken = (username: string, password: string) => {
+  const raw = `${username}:${password}`
+  if (import.meta.client) {
+    return btoa(raw)
+  }
+
+  const buffer = (globalThis as any).Buffer
+  return buffer ? buffer.from(raw).toString('base64') : raw
+}
+
+const authRowsForExecution = (config: RequestAuthConfig) => {
+  const headers: HeaderItem[] = []
+  const queryParams: QueryParamItem[] = []
+  const addHeader = (key: string, value: string) => {
+    if (!key || !value) return
+    headers.push({ id: crypto.randomUUID(), key, value, enabled: true })
+  }
+  const addQueryParam = (key: string, value: string) => {
+    if (!key || !value) return
+    queryParams.push({ id: crypto.randomUUID(), key, value, enabled: true })
+  }
+
+  if (config.mode === 'bearer') {
+    addHeader('Authorization', `Bearer ${config.bearerToken}`)
+  } else if (config.mode === 'api-key') {
+    if (config.apiKeyPlacement === 'query') {
+      addQueryParam(config.apiKeyName || 'x-api-key', config.apiKeyValue)
+    } else {
+      addHeader(config.apiKeyName || 'x-api-key', config.apiKeyValue)
+    }
+  } else if (config.mode === 'basic') {
+    addHeader('Authorization', `Basic ${encodeBasicToken(config.basicUsername, config.basicPassword)}`)
+  } else if (config.mode === 'oauth2' || config.mode === 'oidc') {
+    addHeader('Authorization', `Bearer ${config.oauthAccessToken}`)
+  }
+
+  return { headers, queryParams }
+}
+
 export function useWorkbench() {
   const treeItems = useState<TreeItem[]>('workbench:tree', () => [])
   const rootRequests = useState<RequestItem[]>('workbench:root-requests', () => [])
@@ -567,13 +606,14 @@ export function useWorkbench() {
 
     loading.value = true
     const { post } = useApiClient()
+    const authRows = authRowsForExecution(requestAuthConfig.value)
 
     try {
       const response = await post<WorkbenchResponse>('/execute', {
         method: activeRequest.value.method,
         url: `${requestTarget.value.baseUrl}${activeRequest.value.path}`,
-        headers: headers.value.filter(h => h.enabled && h.key),
-        queryParams: queryParams.value.filter(p => p.enabled && p.key),
+        headers: [...headers.value.filter(h => h.enabled && h.key), ...authRows.headers],
+        queryParams: [...queryParams.value.filter(p => p.enabled && p.key), ...authRows.queryParams],
         body: requestBody.value,
       })
 
@@ -609,6 +649,7 @@ export function useWorkbench() {
     loading.value = true
     webSocketState.value = 'connecting'
     webSocketEvents.value = []
+    const authRows = authRowsForExecution(requestAuthConfig.value)
     
     appendWebSocketEvent({
       direction: 'system',
@@ -621,7 +662,8 @@ export function useWorkbench() {
       const resp = await post<{ id: string }>('/execute/ws', {
         method: activeRequest.value.method,
         url: `${requestTarget.value.baseUrl}${activeRequest.value.path}`,
-        headers: headers.value.filter(h => h.enabled && h.key),
+        headers: [...headers.value.filter(h => h.enabled && h.key), ...authRows.headers],
+        queryParams: authRows.queryParams,
       })
       webSocketExecutionId.value = resp.id
     } catch (err: any) {
