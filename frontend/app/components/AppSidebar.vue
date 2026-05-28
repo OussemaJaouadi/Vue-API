@@ -37,7 +37,7 @@ defineEmits<{
 
 const theme = useThemePreference()
 const route = useRoute()
-const { workspaces } = useWorkspace()
+const { workspaces, workspacesLoading } = useWorkspace()
 const createModalOpen = ref(false)
 
 const healthLabel = computed(() => {
@@ -151,9 +151,23 @@ onBeforeUnmount(() => {
       </template>
     </div>
 
-    <!-- Workspace Switcher -->
-    <div v-if="!collapsed && workspaces.length > 0" class="border-b border-border/30 px-3 py-2">
-      <WorkspaceSwitcher @create="createModalOpen = true" />
+    <!-- Workspace Switcher / Create -->
+    <div v-if="!collapsed" class="border-b border-border/30 px-3 py-2">
+      <WorkspaceSwitcher
+        v-if="workspaces.length > 0"
+        @create="createModalOpen = true"
+      />
+      <button
+        v-else-if="!workspacesLoading"
+        class="flex h-8 w-full items-center justify-center gap-2 border border-dashed border-primary/30 bg-primary/5 px-3 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:border-primary hover:bg-primary/10"
+        type="button"
+        @click="createModalOpen = true"
+      >
+        Create first workspace
+      </button>
+      <div v-else class="flex h-8 w-full items-center justify-center">
+        <div class="size-3 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+      </div>
     </div>
 
     <!-- Navigation -->

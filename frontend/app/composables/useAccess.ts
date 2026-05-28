@@ -15,11 +15,13 @@ export function useAccess() {
 
   const users = useState<AccessUser[]>('access:users', () => [])
   const usersLoading = useState<boolean>('access:loading', () => true)
+  const usersError = useState<string | null>('access:error', () => null)
   const selectedUserId = useState<string>('access:selected-user', () => '')
 
   const selectedUser = computed(() => users.value.find(user => user.id === selectedUserId.value) ?? users.value[0])
 
   const workspaceId = useState<string>('workspace:id', () => '')
+  const workspacesLoading = useState<boolean>('workspaces:loading', () => false)
 
   const loadGrantsForUser = async (userId: string) => {
     const wid = workspaceId.value
@@ -33,8 +35,12 @@ export function useAccess() {
 
   const loadUsers = async () => {
     const wid = workspaceId.value
-    if (!wid) return
+    if (!wid) {
+      if (!workspacesLoading.value) usersLoading.value = false
+      return
+    }
     usersLoading.value = true
+    usersError.value = null
     try {
       const data = await get<any[]>(`/v1/workspaces/${wid}/members`)
       users.value = await Promise.all(data.map(async (m: any) => {
@@ -52,15 +58,15 @@ export function useAccess() {
       if (data.length > 0 && !selectedUserId.value) {
         selectedUserId.value = data[0].userId
       }
-    } catch (err) {
-      console.error('Failed to load workspace members', err)
+    } catch (err: any) {
+      usersError.value = err?.data?.error || err?.message || 'Failed to load workspace members'
     } finally {
       usersLoading.value = false
     }
   }
 
-  watch(workspaceId, (id) => {
-    if (id) loadUsers()
+  watch(workspaceId, () => {
+    loadUsers()
   }, { immediate: true })
 
   const collectionEntries = computed(() =>
@@ -184,6 +190,7 @@ export function useAccess() {
   return {
     users,
     usersLoading,
+    usersError,
     selectedUserId,
     selectedUser,
     grantSections,

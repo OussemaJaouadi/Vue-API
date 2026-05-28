@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhDatabase, PhPlus } from '@phosphor-icons/vue'
+import { PhDatabase, PhPlus, PhWarning } from '@phosphor-icons/vue'
 import EnvironmentsHeader from '~/components/environments/EnvironmentsHeader.vue'
 import EnvironmentsRoster from '~/components/environments/EnvironmentsRoster.vue'
 import EnvironmentsEditor from '~/components/environments/EnvironmentsEditor.vue'
@@ -9,6 +9,7 @@ import EnvironmentsCreateSheet from '~/components/environments/EnvironmentsCreat
 const {
   environments,
   envsLoading,
+  envsError,
   activeEnvironmentName,
   activeEnvironment,
   secretVariableCount,
@@ -29,7 +30,7 @@ const createOpen = ref(false)
 
     <div class="flex-1 flex min-w-0 gap-3 overflow-x-auto p-3 bg-muted/5">
       <EnvironmentsRoster
-        :loading="envsLoading"
+        :loading="false"
         :environments="environments"
         :active-environment-name="activeEnvironmentName"
         @select="name => activeEnvironmentName = name"
@@ -40,6 +41,21 @@ const createOpen = ref(false)
           <div class="flex flex-col items-center gap-4 opacity-40">
             <div class="size-12 border-4 border-primary/20 border-t-primary animate-spin" />
             <span class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading environments...</span>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="envsError">
+        <div class="flex-1 flex items-center justify-center">
+          <div class="flex flex-col items-center gap-4 px-8 text-center">
+            <div class="grid size-16 place-items-center border-2 border-dashed border-destructive/30 bg-destructive/5 text-destructive/40">
+              <PhWarning class="size-8" />
+            </div>
+            <div>
+              <h3 class="font-mono text-[13px] font-black uppercase tracking-tight text-destructive">Failed to Load</h3>
+              <p class="mt-1 font-mono text-[10px] text-muted-foreground/60 max-w-xs">{{ envsError }}</p>
+            </div>
+            <button class="flex h-10 items-center gap-2 border-2 border-destructive/30 bg-destructive/8 px-4 font-mono text-[10px] font-black uppercase tracking-widest text-destructive transition-all hover:bg-destructive/15" type="button" @click="loadEnvironments()">Retry</button>
           </div>
         </div>
       </template>

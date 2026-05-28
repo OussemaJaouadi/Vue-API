@@ -4,27 +4,33 @@ export function useEnvironments() {
   const environments = useState<any[]>('environments:data', () => [])
   const activeEnvironmentName = useState<string>('environments:active', () => '')
   const envsLoading = useState<boolean>('environments:loading', () => true)
+  const envsError = useState<string | null>('environments:error', () => null)
 
   const loadEnvironments = async () => {
     const wid = workspaceId.value
-    if (!wid) return
+    if (!wid) {
+      if (!workspacesLoading.value) envsLoading.value = false
+      return
+    }
     envsLoading.value = true
+    envsError.value = null
     try {
       const data = await get<any[]>(`/v1/environments?workspaceId=${wid}`)
       environments.value = data
       if (data.length > 0 && !activeEnvironmentName.value) {
         activeEnvironmentName.value = data[0].name
       }
-    } catch (err) {
-      console.error('Failed to load environments', err)
+    } catch (err: any) {
+      envsError.value = err?.data?.error || err?.message || 'Failed to load environments'
     } finally {
       envsLoading.value = false
     }
   }
 
   const workspaceId = useState<string>('workspace:id', () => '')
-  watch(workspaceId, (id) => {
-    if (id) loadEnvironments()
+  const workspacesLoading = useState<boolean>('workspaces:loading', () => false)
+  watch(workspaceId, () => {
+    loadEnvironments()
   }, { immediate: true })
 
   const activeEnvironment = computed(() => {
@@ -118,6 +124,7 @@ export function useEnvironments() {
   return {
     environments,
     envsLoading,
+    envsError,
     activeEnvironmentName,
     activeEnvironment,
     secretVariableCount,

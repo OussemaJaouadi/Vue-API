@@ -116,31 +116,40 @@ export function useWorkbench() {
   const treeItems = useState<TreeItem[]>('workbench:tree', () => [])
   const rootRequests = useState<RequestItem[]>('workbench:root-requests', () => [])
   const collectionsLoading = useState<boolean>('workbench:collections-loading', () => true)
+  const collectionsError = useState<string | null>('workbench:collections-error', () => null)
 
   const workspaceId = useState<string>('workspace:id', () => '')
+  const workspacesLoading = useState<boolean>('workspaces:loading', () => false)
 
   onMounted(() => {
     if (treeItems.value.length === 0) {
       if (workspaceId.value) {
         loadCollections()
+      } else if (!workspacesLoading.value) {
+        collectionsLoading.value = false
       }
     } else {
       collectionsLoading.value = false
     }
   })
   watch(workspaceId, (id) => {
-    if (id && treeItems.value.length === 0) {
-      loadCollections()
+    if (treeItems.value.length === 0) {
+      if (id) {
+        loadCollections()
+      } else if (!workspacesLoading.value) {
+        collectionsLoading.value = false
+      }
     }
   })
 
   const loadCollections = async () => {
     const wid = workspaceId.value
     if (!wid) {
-      collectionsLoading.value = false
+      if (!workspacesLoading.value) collectionsLoading.value = false
       return
     }
     collectionsLoading.value = true
+    collectionsError.value = null
     try {
       const { get } = useApiClient()
       const data = await get<any>(`/v1/collections?workspaceId=${wid}`)
@@ -161,8 +170,8 @@ export function useWorkbench() {
         name: r.name,
         path: r.path,
       }))
-    } catch (err) {
-      console.error('Failed to load collections', err)
+    } catch (err: any) {
+      collectionsError.value = err?.data?.error || err?.message || 'Failed to load collections'
     } finally {
       collectionsLoading.value = false
     }
@@ -615,6 +624,7 @@ export function useWorkbench() {
     moveHeader,
     loadCollections,
     collectionsLoading,
+    collectionsError,
     addFolder,
     addRequest,
     moveRequest,

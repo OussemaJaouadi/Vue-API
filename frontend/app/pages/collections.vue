@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { PhFolderOpen, PhPlus, PhWarning } from '@phosphor-icons/vue'
 import CollectionsHeader from '~/components/collections/CollectionsHeader.vue'
 import CollectionsRoster from '~/components/collections/CollectionsRoster.vue'
 import CollectionsWorkbench from '~/components/collections/CollectionsWorkbench.vue'
@@ -95,8 +96,55 @@ const confirmImport = () => {
     >
 
     <div class="flex-1 flex min-w-0 gap-3 overflow-x-auto p-3 bg-muted/5">
+      <template v-if="workbench.collectionsLoading.value">
+        <div class="flex-1 flex items-center justify-center">
+          <div class="flex flex-col items-center gap-4 opacity-40">
+            <div class="size-12 border-4 border-primary/20 border-t-primary animate-spin" />
+            <span class="font-mono text-[10px] font-black uppercase tracking-widest text-muted-foreground">Loading collections...</span>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="workbench.collectionsError.value">
+        <div class="flex-1 flex items-center justify-center">
+          <div class="flex flex-col items-center gap-4 px-8 text-center">
+            <div class="grid size-16 place-items-center border-2 border-dashed border-destructive/30 bg-destructive/5 text-destructive/40">
+              <PhWarning class="size-8" />
+            </div>
+            <div>
+              <h3 class="font-mono text-[13px] font-black uppercase tracking-tight text-destructive">Failed to Load</h3>
+              <p class="mt-1 font-mono text-[10px] text-muted-foreground/60 max-w-xs">{{ workbench.collectionsError.value }}</p>
+            </div>
+            <button class="flex h-10 items-center gap-2 border-2 border-destructive/30 bg-destructive/8 px-4 font-mono text-[10px] font-black uppercase tracking-widest text-destructive transition-all hover:bg-destructive/15" type="button" @click="workbench.loadCollections()">Retry</button>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="workbench.treeItems.value.length === 0 && workbench.rootRequests.value.length === 0">
+        <div class="flex-1 flex items-center justify-center">
+          <div class="flex flex-col items-center gap-4 px-8 text-center">
+            <div class="grid size-16 place-items-center border-2 border-dashed border-muted-foreground/30 bg-muted/10 text-muted-foreground/40">
+              <PhFolderOpen class="size-8" />
+            </div>
+            <div>
+              <h3 class="font-mono text-[13px] font-black uppercase tracking-tight text-muted-foreground">No Collections Yet</h3>
+              <p class="mt-1 font-mono text-[10px] text-muted-foreground/60">Create a collection to organize your API requests.</p>
+            </div>
+            <button
+              class="flex h-10 items-center gap-2 border-2 border-primary/30 bg-primary/8 px-4 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:bg-primary/15 hover:shadow-[3px_3px_0_0_rgba(16,185,129,0.12)] active:translate-x-0.5 active:translate-y-0.5"
+              type="button"
+              @click="workbench.addFolder()"
+            >
+              <PhPlus class="size-4" />
+              Create Collection
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <template v-else>
       <CollectionsRoster
-        :loading="workbench.collectionsLoading.value"
+        :loading="false"
         :groups="workbench.treeItems.value"
         :active-collection-name="activeCollectionName"
         :total-request-count="requestCount"
@@ -119,6 +167,7 @@ const confirmImport = () => {
         :active-collection-name="activeCollectionName"
         :policy="environmentPolicyFor(activeCollectionName)"
       />
+      </template>
     </div>
 
     <CollectionsImportSheet
