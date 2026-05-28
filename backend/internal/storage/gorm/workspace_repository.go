@@ -100,6 +100,51 @@ func (r *WorkspaceRepository) Update(ctx context.Context, id string, params work
 	return toWorkspace(model), nil
 }
 
+func (r *WorkspaceRepository) Delete(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var count int64
+		if err := tx.Model(&WorkspaceModel{}).Where("id = ?", id).Count(&count).Error; err != nil {
+			return err
+		}
+		if count == 0 {
+			return workspace.ErrWorkspaceNotFound
+		}
+
+		var environmentIDs []string
+		if err := tx.Model(&EnvironmentModel{}).
+			Where("workspace_id = ?", id).
+			Pluck("id", &environmentIDs).Error; err != nil {
+			return err
+		}
+		if len(environmentIDs) > 0 {
+			if err := tx.Where("environment_id IN ?", environmentIDs).Delete(&VariableModel{}).Error; err != nil {
+				return err
+			}
+		}
+
+		deletes := []struct {
+			query string
+			value any
+			model any
+		}{
+			{query: "workspace_id = ?", value: id, model: &ResourceGrantModel{}},
+			{query: "workspace_id = ?", value: id, model: &RequestModel{}},
+			{query: "workspace_id = ?", value: id, model: &FolderModel{}},
+			{query: "workspace_id = ?", value: id, model: &EnvironmentModel{}},
+			{query: "workspace_id = ?", value: id, model: &WorkspaceMembershipModel{}},
+			{query: "id = ?", value: id, model: &WorkspaceModel{}},
+		}
+
+		for _, deletion := range deletes {
+			if err := tx.Where(deletion.query, deletion.value).Delete(deletion.model).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
 func toWorkspace(m WorkspaceModel) workspace.Workspace {
 	return workspace.Workspace{
 		ID:              m.ID,

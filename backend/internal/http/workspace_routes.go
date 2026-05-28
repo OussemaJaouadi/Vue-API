@@ -176,6 +176,27 @@ func RegisterWorkspaceRoutes(router *echo.Echo, deps WorkspaceRouteDeps) {
 		return c.JSON(http.StatusOK, map[string]any{"id": ws.ID, "name": ws.Name})
 	})
 
+	g.DELETE("/:id", func(c echo.Context) error {
+		wsID := c.Param("id")
+		if _, err := deps.Workspaces.FindByID(c.Request().Context(), wsID); errors.Is(err, workspace.ErrWorkspaceNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, "Workspace not found")
+		} else if err != nil {
+			return err
+		}
+
+		if !hasWorkspacePermission(c, deps.Memberships, wsID, auth.PermissionDeleteProject) {
+			return echo.NewHTTPError(http.StatusForbidden, "Only workspace admins can delete workspaces")
+		}
+
+		if err := deps.Workspaces.Delete(c.Request().Context(), wsID); errors.Is(err, workspace.ErrWorkspaceNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, "Workspace not found")
+		} else if err != nil {
+			return err
+		}
+
+		return c.NoContent(http.StatusNoContent)
+	})
+
 	m := g.Group("/:id/members")
 
 	m.GET("", func(c echo.Context) error {

@@ -80,6 +80,25 @@ func TestMemoryWorkspaceRepository_Update_NotFound(t *testing.T) {
 	assert.ErrorIs(t, err, workspace.ErrWorkspaceNotFound)
 }
 
+func TestMemoryWorkspaceRepository_Delete(t *testing.T) {
+	repo := workspace.NewMemoryWorkspaceRepository()
+	ctx := context.Background()
+	ws, err := repo.Create(ctx, workspace.CreateWorkspaceParams{Name: "A", CreatedByUserID: "user1"})
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, ws.ID)
+	require.NoError(t, err)
+
+	_, err = repo.FindByID(ctx, ws.ID)
+	assert.ErrorIs(t, err, workspace.ErrWorkspaceNotFound)
+}
+
+func TestMemoryWorkspaceRepository_Delete_NotFound(t *testing.T) {
+	repo := workspace.NewMemoryWorkspaceRepository()
+	err := repo.Delete(context.Background(), "nope")
+	assert.ErrorIs(t, err, workspace.ErrWorkspaceNotFound)
+}
+
 func TestMemoryWorkspaceRepository_ListByUser_NoWorkspaces(t *testing.T) {
 	repo := workspace.NewMemoryWorkspaceRepository()
 	workspaces, err := repo.ListByUser(context.Background(), "user1")

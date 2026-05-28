@@ -25,14 +25,14 @@ type Membership struct {
 }
 
 type ResourceGrant struct {
-	ID            string
-	WorkspaceID   string
-	UserID        string
-	ResourceType  string
-	ResourceID    string
-	AccessLevel   string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID           string
+	WorkspaceID  string
+	UserID       string
+	ResourceType string
+	ResourceID   string
+	AccessLevel  string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type CreateWorkspaceParams struct {
@@ -74,6 +74,7 @@ type WorkspaceRepository interface {
 	Create(ctx context.Context, params CreateWorkspaceParams) (Workspace, error)
 	FindByID(ctx context.Context, id string) (Workspace, error)
 	Update(ctx context.Context, id string, params UpdateWorkspaceParams) (Workspace, error)
+	Delete(ctx context.Context, id string) error
 }
 
 type MembershipRepository interface {

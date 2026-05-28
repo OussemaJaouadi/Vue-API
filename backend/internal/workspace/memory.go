@@ -85,6 +85,16 @@ func (r *MemoryWorkspaceRepository) Update(ctx context.Context, id string, param
 	return ws, nil
 }
 
+func (r *MemoryWorkspaceRepository) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, exists := r.workspaces[id]; !exists {
+		return ErrWorkspaceNotFound
+	}
+	delete(r.workspaces, id)
+	return nil
+}
+
 type MemoryMembershipRepository struct {
 	mu          sync.RWMutex
 	memberships map[string]Membership

@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"vue-api/backend/internal/auth"
-	"vue-api/backend/internal/workspace"
 	apihttp "vue-api/backend/internal/http"
+	"vue-api/backend/internal/workspace"
 )
 
 func workspaceTestDeps(t *testing.T) (*echo.Echo, string, string) {
@@ -203,6 +203,49 @@ func TestWorkspaceRoutes_UpdateWorkspace_NotFound(t *testing.T) {
 		"name": "Renamed",
 	}, token)
 	assert.Equal(t, http.StatusNotFound, resp.Code)
+}
+
+func TestWorkspaceRoutes_DeleteWorkspace(t *testing.T) {
+	router, token, wsID := workspaceTestDeps(t)
+
+	resp := performJSON(router, http.MethodDelete, "/v1/workspaces/"+wsID, nil, token)
+	assert.Equal(t, http.StatusNoContent, resp.Code)
+
+	getResp := performJSON(router, http.MethodGet, "/v1/workspaces/"+wsID, nil, token)
+	assert.Equal(t, http.StatusNotFound, getResp.Code)
+
+	listResp := performJSON(router, http.MethodGet, "/v1/workspaces", nil, token)
+	var list []map[string]any
+	require.NoError(t, json.Unmarshal(listResp.Body.Bytes(), &list))
+	assert.Empty(t, list)
+}
+
+func TestWorkspaceRoutes_DeleteWorkspace_NotFound(t *testing.T) {
+	router, token, _ := workspaceTestDeps(t)
+
+	resp := performJSON(router, http.MethodDelete, "/v1/workspaces/nonexistent", nil, token)
+	assert.Equal(t, http.StatusNotFound, resp.Code)
+}
+
+func TestWorkspaceRoutes_DeleteWorkspace_RequiresAdmin(t *testing.T) {
+	router, token, wsID := workspaceTestDeps(t)
+	inviteResp := performJSON(router, http.MethodPost, "/v1/workspaces/"+wsID+"/members", map[string]string{
+		"email": "alice@example.com",
+		"role":  "developer",
+	}, token)
+	require.Equal(t, http.StatusCreated, inviteResp.Code)
+
+	loginResp := performJSON(router, http.MethodPost, "/auth/login", map[string]string{
+		"login":    "alice@example.com",
+		"password": "correct horse battery staple",
+	}, "")
+	require.Equal(t, http.StatusOK, loginResp.Code)
+	var loginBody map[string]any
+	require.NoError(t, json.Unmarshal(loginResp.Body.Bytes(), &loginBody))
+	aliceToken := loginBody["accessToken"].(string)
+
+	resp := performJSON(router, http.MethodDelete, "/v1/workspaces/"+wsID, nil, aliceToken)
+	assert.Equal(t, http.StatusForbidden, resp.Code)
 }
 
 // --- Memberships ---

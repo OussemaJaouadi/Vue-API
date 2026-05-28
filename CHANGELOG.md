@@ -4,6 +4,7 @@
 
 ## New
 
+- Added workspace deletion with admin/manager authorization and transactional cleanup of grants, memberships, collections, requests, environments, and variables.
 - Added HTTP execution service with configurable timeout, TLS, TTFB tracing, and header/query injection.
 - Added WebSocket execution manager with bidirectional relay and broker event publishing.
 - Added authenticated /execute API route group with Bearer token middleware:
@@ -48,6 +49,7 @@
 
 ## New
 
+- Added workspace deletion flow in the workspace switcher with confirmation, API call, local workspace list update, and preferred-workspace fallback.
 - Darkened `--muted-foreground` from oklch(0.552→0.45) in light mode and lightened from oklch(0.765→0.88) in dark mode for WCAG-compliant text contrast.
 - Raised fractional opacity text classes globally: `/10→/40`, `/15→/50`, `/20→/50`, `/30→/60`, `/40→/65`, `/55→/70`.
 - Raised `placeholder:text-muted-foreground` from `/20→/50` across all inputs.

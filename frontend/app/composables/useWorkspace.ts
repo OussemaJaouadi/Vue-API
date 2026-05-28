@@ -1,7 +1,7 @@
 import type { Workspace } from '~/types/workspace'
 
 export function useWorkspace() {
-  const { get, post, put } = useApiClient()
+  const { get, post, put, delete: del } = useApiClient()
   const auth = useAuthSession()
 
   const workspaces = useState<Workspace[]>('workspaces', () => [])
@@ -59,6 +59,22 @@ export function useWorkspace() {
     }
   }
 
+  const deleteWorkspace = async (id: string) => {
+    await del(`/v1/workspaces/${id}`)
+    const nextWorkspaces = workspaces.value.filter(workspace => workspace.id !== id)
+    workspaces.value = nextWorkspaces
+
+    if (currentWorkspaceId.value === id) {
+      currentWorkspaceId.value = nextWorkspaces[0]?.id ?? ''
+    }
+
+    if (import.meta.client && currentWorkspaceId.value) {
+      localStorage.setItem('preferredWorkspaceId', currentWorkspaceId.value)
+    } else if (import.meta.client) {
+      localStorage.removeItem('preferredWorkspaceId')
+    }
+  }
+
   watch(currentWorkspaceId, (id) => {
     if (import.meta.client && id) {
       localStorage.setItem('preferredWorkspaceId', id)
@@ -86,5 +102,6 @@ export function useWorkspace() {
     loadWorkspaces,
     createWorkspace,
     renameWorkspace,
+    deleteWorkspace,
   }
 }
