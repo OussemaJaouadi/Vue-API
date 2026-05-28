@@ -9,25 +9,32 @@ import {
   PhUserCircle,
 } from '@phosphor-icons/vue'
 import type { Component } from 'vue'
+import type { ApiKeyPlacement, AuthMode, OAuthGrant } from '~/composables/useWorkbench'
 
-type AuthMode = 'inherit' | 'bearer' | 'api-key' | 'basic' | 'oauth2' | 'oidc' | 'none'
-type ApiKeyPlacement = 'header' | 'query'
-type OAuthGrant = 'authorization-code-pkce' | 'client-credentials' | 'refresh-token'
+const workbench = useWorkbench()
+const authConfig = workbench.requestAuthConfig
 
-const authMode = useState<AuthMode>('workbench:auth-mode', () => 'bearer')
-const bearerToken = useState<string>('workbench:auth-bearer-token', () => '{{accessToken}}')
-const apiKeyName = useState<string>('workbench:auth-api-key-name', () => 'x-api-key')
-const apiKeyValue = useState<string>('workbench:auth-api-key-value', () => '{{apiKey}}')
-const apiKeyPlacement = useState<ApiKeyPlacement>('workbench:auth-api-key-placement', () => 'header')
-const basicUsername = useState<string>('workbench:auth-basic-username', () => '{{username}}')
-const basicPassword = useState<string>('workbench:auth-basic-password', () => '{{password}}')
-const oauthGrant = useState<OAuthGrant>('workbench:auth-oauth-grant', () => 'authorization-code-pkce')
-const oauthAccessToken = useState<string>('workbench:auth-oauth-access-token', () => '{{oauthAccessToken}}')
-const oauthClientId = useState<string>('workbench:auth-oauth-client-id', () => '{{clientId}}')
-const oauthTokenUrl = useState<string>('workbench:auth-oauth-token-url', () => '{{tokenUrl}}')
-const oauthScopes = useState<string>('workbench:auth-oauth-scopes', () => 'openid profile email')
-const oidcIssuerUrl = useState<string>('workbench:auth-oidc-issuer-url', () => '{{issuerUrl}}')
-const oidcAudience = useState<string>('workbench:auth-oidc-audience', () => '{{audience}}')
+const field = <T extends keyof typeof authConfig.value>(key: T) => computed({
+  get: () => authConfig.value[key],
+  set: value => {
+    authConfig.value = { ...authConfig.value, [key]: value }
+  },
+})
+
+const authMode = field('mode')
+const bearerToken = field('bearerToken')
+const apiKeyName = field('apiKeyName')
+const apiKeyValue = field('apiKeyValue')
+const apiKeyPlacement = field('apiKeyPlacement')
+const basicUsername = field('basicUsername')
+const basicPassword = field('basicPassword')
+const oauthGrant = field('oauthGrant')
+const oauthAccessToken = field('oauthAccessToken')
+const oauthClientId = field('oauthClientId')
+const oauthTokenUrl = field('oauthTokenUrl')
+const oauthScopes = field('oauthScopes')
+const oidcIssuerUrl = field('oidcIssuerUrl')
+const oidcAudience = field('oidcAudience')
 
 const modes: Array<{
   value: AuthMode

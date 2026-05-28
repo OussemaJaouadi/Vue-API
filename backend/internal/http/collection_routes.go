@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -45,12 +46,7 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 
 			requestList := make([]map[string]any, 0, len(reqs))
 			for _, req := range reqs {
-				requestList = append(requestList, map[string]any{
-					"id":     req.ID,
-					"method": req.Method,
-					"name":   req.Name,
-					"path":   req.Path,
-				})
+				requestList = append(requestList, requestResponse(req))
 			}
 
 			result = append(result, map[string]any{
@@ -68,12 +64,7 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 
 		rootRequestList := make([]map[string]any, 0, len(rootReqs))
 		for _, req := range rootReqs {
-			rootRequestList = append(rootRequestList, map[string]any{
-				"id":     req.ID,
-				"method": req.Method,
-				"name":   req.Name,
-				"path":   req.Path,
-			})
+			rootRequestList = append(rootRequestList, requestResponse(req))
 		}
 
 		return c.JSON(http.StatusOK, map[string]any{
@@ -175,11 +166,16 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 
 	g.POST("/requests", func(c echo.Context) error {
 		var req struct {
-			WorkspaceID  string  `json:"workspaceId"`
-			CollectionID *string `json:"collectionId"`
-			Method       string  `json:"method"`
-			Name         string  `json:"name"`
-			Path         string  `json:"path"`
+			WorkspaceID  string          `json:"workspaceId"`
+			CollectionID *string         `json:"collectionId"`
+			Method       string          `json:"method"`
+			Name         string          `json:"name"`
+			Path         string          `json:"path"`
+			QueryParams  json.RawMessage `json:"queryParams"`
+			Headers      json.RawMessage `json:"headers"`
+			Body         string          `json:"body"`
+			BodyLanguage string          `json:"bodyLanguage"`
+			AuthConfig   json.RawMessage `json:"authConfig"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
@@ -200,30 +196,35 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		}
 
 		request, err := deps.Collections.CreateRequest(c.Request().Context(), collection.CreateRequestParams{
-			CollectionID: req.CollectionID,
-			WorkspaceID:  req.WorkspaceID,
-			Method:       method,
-			Name:         req.Name,
-			Path:         req.Path,
+			CollectionID:    req.CollectionID,
+			WorkspaceID:     req.WorkspaceID,
+			Method:          method,
+			Name:            req.Name,
+			Path:            req.Path,
+			QueryParamsJSON: rawJSONOrDefault(req.QueryParams, "[]"),
+			HeadersJSON:     rawJSONOrDefault(req.Headers, "[]"),
+			Body:            req.Body,
+			BodyLanguage:    valueOrDefault(req.BodyLanguage, "json"),
+			AuthConfigJSON:  rawJSONOrDefault(req.AuthConfig, "{}"),
 		})
 		if err != nil {
 			return err
 		}
 
-		return c.JSON(http.StatusCreated, map[string]any{
-			"id":     request.ID,
-			"method": request.Method,
-			"name":   request.Name,
-			"path":   request.Path,
-		})
+		return c.JSON(http.StatusCreated, requestResponse(request))
 	})
 
 	g.PUT("/requests/:id", func(c echo.Context) error {
 		var req struct {
-			WorkspaceID string  `json:"workspaceId"`
-			Method      *string `json:"method"`
-			Name        *string `json:"name"`
-			Path        *string `json:"path"`
+			WorkspaceID  string           `json:"workspaceId"`
+			Method       *string          `json:"method"`
+			Name         *string          `json:"name"`
+			Path         *string          `json:"path"`
+			QueryParams  *json.RawMessage `json:"queryParams"`
+			Headers      *json.RawMessage `json:"headers"`
+			Body         *string          `json:"body"`
+			BodyLanguage *string          `json:"bodyLanguage"`
+			AuthConfig   *json.RawMessage `json:"authConfig"`
 		}
 		if err := c.Bind(&req); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
@@ -235,11 +236,32 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
 		}
 
-		request, err := deps.Collections.UpdateRequest(c.Request().Context(), c.Param("id"), collection.UpdateRequestParams{
+		params := collection.UpdateRequestParams{
 			Method: req.Method,
 			Name:   req.Name,
 			Path:   req.Path,
-		})
+		}
+		if req.QueryParams != nil {
+			value := rawJSONOrDefault(*req.QueryParams, "[]")
+			params.QueryParamsJSON = &value
+		}
+		if req.Headers != nil {
+			value := rawJSONOrDefault(*req.Headers, "[]")
+			params.HeadersJSON = &value
+		}
+		if req.Body != nil {
+			params.Body = req.Body
+		}
+		if req.BodyLanguage != nil {
+			value := valueOrDefault(*req.BodyLanguage, "json")
+			params.BodyLanguage = &value
+		}
+		if req.AuthConfig != nil {
+			value := rawJSONOrDefault(*req.AuthConfig, "{}")
+			params.AuthConfigJSON = &value
+		}
+
+		request, err := deps.Collections.UpdateRequest(c.Request().Context(), c.Param("id"), params)
 		if errors.Is(err, collection.ErrRequestNotFound) {
 			return echo.NewHTTPError(http.StatusNotFound, "Request not found")
 		}
@@ -247,12 +269,7 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 			return err
 		}
 
-		return c.JSON(http.StatusOK, map[string]any{
-			"id":     request.ID,
-			"method": request.Method,
-			"name":   request.Name,
-			"path":   request.Path,
-		})
+		return c.JSON(http.StatusOK, requestResponse(request))
 	})
 
 	g.DELETE("/requests/:id", func(c echo.Context) error {
@@ -273,4 +290,47 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 
 		return c.NoContent(http.StatusNoContent)
 	})
+}
+
+func requestResponse(req collection.Request) map[string]any {
+	return map[string]any{
+		"id":           req.ID,
+		"method":       req.Method,
+		"name":         req.Name,
+		"path":         req.Path,
+		"queryParams":  decodeJSONOrDefault(req.QueryParamsJSON, []any{}),
+		"headers":      decodeJSONOrDefault(req.HeadersJSON, []any{}),
+		"body":         req.Body,
+		"bodyLanguage": valueOrDefault(req.BodyLanguage, "json"),
+		"authConfig":   decodeJSONOrDefault(req.AuthConfigJSON, map[string]any{}),
+	}
+}
+
+func rawJSONOrDefault(raw json.RawMessage, fallback string) string {
+	if len(raw) == 0 || string(raw) == "null" {
+		return fallback
+	}
+
+	return string(raw)
+}
+
+func decodeJSONOrDefault(raw string, fallback any) any {
+	if raw == "" {
+		return fallback
+	}
+
+	var decoded any
+	if err := json.Unmarshal([]byte(raw), &decoded); err != nil {
+		return fallback
+	}
+
+	return decoded
+}
+
+func valueOrDefault(value string, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+
+	return value
 }

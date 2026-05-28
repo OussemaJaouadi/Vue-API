@@ -93,13 +93,18 @@ func (repo *CollectionRepository) CreateFolder(ctx context.Context, params colle
 
 func (repo *CollectionRepository) CreateRequest(ctx context.Context, params collection.CreateRequestParams) (collection.Request, error) {
 	model := RequestModel{
-		ID:           id.NewUUIDV7(),
-		CollectionID: params.CollectionID,
-		WorkspaceID:  params.WorkspaceID,
-		Method:       params.Method,
-		Name:         params.Name,
-		Path:         params.Path,
-		SortOrder:    0,
+		ID:              id.NewUUIDV7(),
+		CollectionID:    params.CollectionID,
+		WorkspaceID:     params.WorkspaceID,
+		Method:          params.Method,
+		Name:            params.Name,
+		Path:            params.Path,
+		QueryParamsJSON: defaultJSON(params.QueryParamsJSON, "[]"),
+		HeadersJSON:     defaultJSON(params.HeadersJSON, "[]"),
+		Body:            params.Body,
+		BodyLanguage:    defaultJSON(params.BodyLanguage, "json"),
+		AuthConfigJSON:  defaultJSON(params.AuthConfigJSON, "{}"),
+		SortOrder:       0,
 	}
 
 	if err := repo.db.WithContext(ctx).Create(&model).Error; err != nil {
@@ -149,6 +154,21 @@ func (repo *CollectionRepository) UpdateRequest(ctx context.Context, requestID s
 	}
 	if params.Path != nil {
 		model.Path = *params.Path
+	}
+	if params.QueryParamsJSON != nil {
+		model.QueryParamsJSON = defaultJSON(*params.QueryParamsJSON, "[]")
+	}
+	if params.HeadersJSON != nil {
+		model.HeadersJSON = defaultJSON(*params.HeadersJSON, "[]")
+	}
+	if params.Body != nil {
+		model.Body = *params.Body
+	}
+	if params.BodyLanguage != nil {
+		model.BodyLanguage = defaultJSON(*params.BodyLanguage, "json")
+	}
+	if params.AuthConfigJSON != nil {
+		model.AuthConfigJSON = defaultJSON(*params.AuthConfigJSON, "{}")
 	}
 
 	if err := repo.db.WithContext(ctx).Save(&model).Error; err != nil {
@@ -200,14 +220,27 @@ func toDomainFolder(model FolderModel) collection.Folder {
 
 func toDomainRequest(model RequestModel) collection.Request {
 	return collection.Request{
-		ID:           model.ID,
-		CollectionID: model.CollectionID,
-		WorkspaceID:  model.WorkspaceID,
-		Method:       model.Method,
-		Name:         model.Name,
-		Path:         model.Path,
-		SortOrder:    model.SortOrder,
-		CreatedAt:    model.CreatedAt,
-		UpdatedAt:    model.UpdatedAt,
+		ID:              model.ID,
+		CollectionID:    model.CollectionID,
+		WorkspaceID:     model.WorkspaceID,
+		Method:          model.Method,
+		Name:            model.Name,
+		Path:            model.Path,
+		QueryParamsJSON: defaultJSON(model.QueryParamsJSON, "[]"),
+		HeadersJSON:     defaultJSON(model.HeadersJSON, "[]"),
+		Body:            model.Body,
+		BodyLanguage:    defaultJSON(model.BodyLanguage, "json"),
+		AuthConfigJSON:  defaultJSON(model.AuthConfigJSON, "{}"),
+		SortOrder:       model.SortOrder,
+		CreatedAt:       model.CreatedAt,
+		UpdatedAt:       model.UpdatedAt,
 	}
+}
+
+func defaultJSON(value string, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+
+	return value
 }

@@ -109,7 +109,11 @@ const fullUrl = computed({
       <div class="flex items-center px-4 gap-3">
         <UiTooltip>
           <UiTooltipTrigger as-child>
-            <button class="group flex size-8 items-center justify-center border-2 border-primary/10 bg-background transition-all hover:border-primary/40 hover:bg-primary/5 text-muted-foreground hover:text-primary active:translate-x-0.5 active:translate-y-0.5 active:shadow-none">
+            <button
+              class="group flex size-8 items-center justify-center border-2 border-primary/10 bg-background text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-primary active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+              type="button"
+              @click="workbench.saveActiveRequestState"
+            >
               <PhFloppyDisk class="size-4" />
             </button>
           </UiTooltipTrigger>

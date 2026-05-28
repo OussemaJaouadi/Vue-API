@@ -15,15 +15,20 @@ type FolderModel struct {
 func (FolderModel) TableName() string { return "collections" }
 
 type RequestModel struct {
-	ID           string  `gorm:"primaryKey;column:id"`
-	CollectionID *string `gorm:"column:collection_id"`
-	WorkspaceID  string  `gorm:"column:workspace_id;not null"`
-	Method       string  `gorm:"column:method;not null;default:GET"`
-	Name         string  `gorm:"column:name;not null"`
-	Path         string  `gorm:"column:path;not null"`
-	SortOrder    int     `gorm:"column:sort_order;not null;default:0"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID              string  `gorm:"primaryKey;column:id"`
+	CollectionID    *string `gorm:"column:collection_id"`
+	WorkspaceID     string  `gorm:"column:workspace_id;not null"`
+	Method          string  `gorm:"column:method;not null;default:GET"`
+	Name            string  `gorm:"column:name;not null"`
+	Path            string  `gorm:"column:path;not null"`
+	QueryParamsJSON string  `gorm:"column:query_params_json;not null;default:'[]'"`
+	HeadersJSON     string  `gorm:"column:headers_json;not null;default:'[]'"`
+	Body            string  `gorm:"column:body;not null;default:''"`
+	BodyLanguage    string  `gorm:"column:body_language;not null;default:json"`
+	AuthConfigJSON  string  `gorm:"column:auth_config_json;not null;default:'{}'"`
+	SortOrder       int     `gorm:"column:sort_order;not null;default:0"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 func (RequestModel) TableName() string { return "requests" }

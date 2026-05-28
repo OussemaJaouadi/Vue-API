@@ -10,6 +10,11 @@ export interface RequestItem {
   method: ApiMethod
   name: string
   path: string
+  queryParams?: QueryParamItem[]
+  headers?: HeaderItem[]
+  body?: string
+  bodyLanguage?: BodyLanguage
+  authConfig?: RequestAuthConfig
   active?: boolean
 }
 
@@ -35,6 +40,27 @@ export interface RequestTarget {
 }
 
 export type BodyLanguage = 'json' | 'xml' | 'html' | 'yaml' | 'text'
+export type AuthMode = 'inherit' | 'bearer' | 'api-key' | 'basic' | 'oauth2' | 'oidc' | 'none'
+export type ApiKeyPlacement = 'header' | 'query'
+export type OAuthGrant = 'authorization-code-pkce' | 'client-credentials' | 'refresh-token'
+
+export interface RequestAuthConfig {
+  mode: AuthMode
+  bearerToken: string
+  apiKeyName: string
+  apiKeyValue: string
+  apiKeyPlacement: ApiKeyPlacement
+  basicUsername: string
+  basicPassword: string
+  oauthGrant: OAuthGrant
+  oauthAccessToken: string
+  oauthClientId: string
+  oauthTokenUrl: string
+  oauthScopes: string
+  oidcIssuerUrl: string
+  oidcAudience: string
+}
+
 export type WebSocketConnectionState = 'idle' | 'connecting' | 'connected' | 'closing' | 'closed' | 'error'
 export type WebSocketEventDirection = 'in' | 'out' | 'system' | 'error'
 
@@ -112,6 +138,42 @@ export const WORKBENCH_ICONS: Record<WorkbenchIconKey, Component> = {
   PhLightning,
 }
 
+export const defaultRequestAuthConfig = (): RequestAuthConfig => ({
+  mode: 'bearer',
+  bearerToken: '{{accessToken}}',
+  apiKeyName: 'x-api-key',
+  apiKeyValue: '{{apiKey}}',
+  apiKeyPlacement: 'header',
+  basicUsername: '{{username}}',
+  basicPassword: '{{password}}',
+  oauthGrant: 'authorization-code-pkce',
+  oauthAccessToken: '{{oauthAccessToken}}',
+  oauthClientId: '{{clientId}}',
+  oauthTokenUrl: '{{tokenUrl}}',
+  oauthScopes: 'openid profile email',
+  oidcIssuerUrl: '{{issuerUrl}}',
+  oidcAudience: '{{audience}}',
+})
+
+const cloneRows = <T extends QueryParamItem>(rows?: T[]) => (rows || []).map(row => ({ ...row }))
+
+const activeRows = <T extends QueryParamItem>(rows: T[]) => rows.filter(row => row.key || row.value)
+
+const requestFromApi = (r: any): RequestItem => ({
+  id: r.id,
+  method: r.method,
+  name: r.name,
+  path: r.path,
+  queryParams: cloneRows(r.queryParams),
+  headers: cloneRows(r.headers),
+  body: r.body || '',
+  bodyLanguage: r.bodyLanguage || 'json',
+  authConfig: {
+    ...defaultRequestAuthConfig(),
+    ...(r.authConfig || {}),
+  },
+})
+
 export function useWorkbench() {
   const treeItems = useState<TreeItem[]>('workbench:tree', () => [])
   const rootRequests = useState<RequestItem[]>('workbench:root-requests', () => [])
@@ -163,19 +225,9 @@ export function useWorkbench() {
         id: c.id,
         name: c.name,
         icon: c.icon || 'PhGlobe',
-        requests: c.requests.map((r: any) => ({
-          id: r.id,
-          method: r.method,
-          name: r.name,
-          path: r.path,
-        })),
+        requests: c.requests.map(requestFromApi),
       }))
-      rootRequests.value = (data.rootRequests || []).map((r: any) => ({
-        id: r.id,
-        method: r.method,
-        name: r.name,
-        path: r.path,
-      }))
+      rootRequests.value = (data.rootRequests || []).map(requestFromApi)
       collectionsWorkspaceId.value = wid
     } catch (err: any) {
       treeItems.value = []
@@ -225,6 +277,7 @@ export function useWorkbench() {
   const headers = useState<HeaderItem[]>('workbench:headers', () => [])
   const requestBody = useState<string>('workbench:body', () => '')
   const requestBodyLanguage = useState<BodyLanguage>('workbench:body-language', () => 'json')
+  const requestAuthConfig = useState<RequestAuthConfig>('workbench:auth-config', defaultRequestAuthConfig)
   const webSocketState = useState<WebSocketConnectionState>('workbench:ws-state', () => 'idle')
   const webSocketMessage = useState<string>('workbench:ws-message', () => `{
   "type": "ping",
@@ -275,6 +328,34 @@ export function useWorkbench() {
 
   const isWebSocketRequest = computed(() => activeRequest.value.method === 'SOCKET')
 
+  const hydrateActiveRequestState = () => {
+    const request = allRequests.value.find(item => item.id === activeRequestId.value)
+    if (!request) return
+
+    queryParams.value = cloneRows(request.queryParams)
+    headers.value = cloneRows(request.headers)
+    requestBody.value = request.body || ''
+    requestBodyLanguage.value = request.bodyLanguage || 'json'
+    requestAuthConfig.value = {
+      ...defaultRequestAuthConfig(),
+      ...(request.authConfig || {}),
+    }
+  }
+
+  const syncActiveRequestState = () => {
+    const request = allRequests.value.find(item => item.id === activeRequestId.value)
+    if (!request) return
+
+    request.queryParams = cloneRows(queryParams.value)
+    request.headers = cloneRows(headers.value)
+    request.body = requestBody.value
+    request.bodyLanguage = requestBodyLanguage.value
+    request.authConfig = { ...requestAuthConfig.value }
+  }
+
+  watch(activeRequestId, hydrateActiveRequestState)
+  watch([queryParams, headers, requestBody, requestBodyLanguage, requestAuthConfig], syncActiveRequestState, { deep: true })
+
   const addFolder = async (name: string = 'New Collection') => {
     const wid = workspaceId.value
     if (!wid) return
@@ -313,11 +394,13 @@ export function useWorkbench() {
         method: 'GET',
         name: 'New Request',
         path: '/path',
+        queryParams: [],
+        headers: [],
+        body: '',
+        bodyLanguage: 'json',
+        authConfig: defaultRequestAuthConfig(),
       })
-      newReq.id = created.id
-      newReq.method = created.method
-      newReq.name = created.name
-      newReq.path = created.path
+      Object.assign(newReq, requestFromApi(created))
     } catch (err) {
       console.error('Failed to create request', err)
     }
@@ -426,6 +509,30 @@ export function useWorkbench() {
     if (activeRequest && activeRequest.value) {
       activeRequest.value.method = method
     }
+  }
+
+  const saveActiveRequestState = async () => {
+    const wid = workspaceId.value
+    const request = allRequests.value.find(item => item.id === activeRequestId.value)
+    if (!wid || !request) return
+
+    syncActiveRequestState()
+
+    const { put } = useApiClient()
+    const updated = await put<any>(`/v1/collections/requests/${request.id}`, {
+      workspaceId: wid,
+      method: request.method,
+      name: request.name,
+      path: request.path,
+      queryParams: activeRows(queryParams.value),
+      headers: activeRows(headers.value),
+      body: requestBody.value,
+      bodyLanguage: requestBodyLanguage.value,
+      authConfig: requestAuthConfig.value,
+    })
+
+    Object.assign(request, requestFromApi(updated))
+    hydrateActiveRequestState()
   }
 
   const executeActiveRequest = async () => {
@@ -616,6 +723,7 @@ export function useWorkbench() {
     headers,
     requestBody,
     requestBodyLanguage,
+    requestAuthConfig,
     webSocketState,
     webSocketMessage,
     webSocketMessageLanguage,
@@ -625,6 +733,7 @@ export function useWorkbench() {
     openRequest,
     setActiveRequest,
     setActiveRequestMethod,
+    saveActiveRequestState,
     executeActiveRequest,
     connectWebSocketSession,
     closeWebSocketSession,

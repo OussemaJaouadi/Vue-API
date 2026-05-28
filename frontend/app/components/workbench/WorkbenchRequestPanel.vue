@@ -11,7 +11,7 @@ import {
 const workbench = useWorkbench()
 const activeTab = ref<'params' | 'headers' | 'body'>('params')
 const authOpen = ref(false)
-const authMode = useState<'inherit' | 'bearer' | 'api-key' | 'basic' | 'oauth2' | 'oidc' | 'none'>('workbench:auth-mode', () => 'bearer')
+const authMode = computed(() => workbench.requestAuthConfig.value.mode)
 const activeParamCount = computed(() => workbench.queryParams.value.filter(param => param.enabled && param.key).length)
 const activeHeaderCount = computed(() => workbench.headers.value.filter(header => header.enabled && header.key).length)
 const bodyLabel = computed(() => workbench.isWebSocketRequest.value ? 'Message' : 'Body')

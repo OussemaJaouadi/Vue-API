@@ -17,15 +17,20 @@ type Folder struct {
 }
 
 type Request struct {
-	ID           string
-	CollectionID *string
-	WorkspaceID  string
-	Method       string
-	Name         string
-	Path         string
-	SortOrder    int
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID              string
+	CollectionID    *string
+	WorkspaceID     string
+	Method          string
+	Name            string
+	Path            string
+	QueryParamsJSON string
+	HeadersJSON     string
+	Body            string
+	BodyLanguage    string
+	AuthConfigJSON  string
+	SortOrder       int
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type CreateFolderParams struct {
@@ -40,17 +45,27 @@ type UpdateFolderParams struct {
 }
 
 type CreateRequestParams struct {
-	CollectionID *string
-	WorkspaceID  string
-	Method       string
-	Name         string
-	Path         string
+	CollectionID    *string
+	WorkspaceID     string
+	Method          string
+	Name            string
+	Path            string
+	QueryParamsJSON string
+	HeadersJSON     string
+	Body            string
+	BodyLanguage    string
+	AuthConfigJSON  string
 }
 
 type UpdateRequestParams struct {
-	Method *string
-	Name   *string
-	Path   *string
+	Method          *string
+	Name            *string
+	Path            *string
+	QueryParamsJSON *string
+	HeadersJSON     *string
+	Body            *string
+	BodyLanguage    *string
+	AuthConfigJSON  *string
 }
 
 type FolderWithRequests struct {
