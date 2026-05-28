@@ -16,8 +16,16 @@ export function useWorkspace() {
     try {
       const data = await get<any[]>('/v1/workspaces')
       workspaces.value = data
-      if (data.length > 0 && !currentWorkspaceId.value) {
-        currentWorkspaceId.value = data[0].id
+      if (data.length > 0) {
+        const currentStillExists = data.some(workspace => workspace.id === currentWorkspaceId.value)
+        const preferredId = import.meta.client ? localStorage.getItem('preferredWorkspaceId') : null
+        const preferredWorkspace = preferredId ? data.find(workspace => workspace.id === preferredId) : null
+
+        if (!currentStillExists) {
+          currentWorkspaceId.value = preferredWorkspace?.id ?? data[0].id
+        }
+      } else {
+        currentWorkspaceId.value = ''
       }
     } catch (err) {
       console.error('Failed to load workspaces', err)
