@@ -2,6 +2,7 @@
 const { appName } = useApiConfig()
 const { get } = useApiClient()
 const auth = useAuthSession()
+const { currentWorkspace } = useWorkspace()
 
 const healthStatus = ref<'loading' | 'ok' | 'error'>('loading')
 const sidebarCollapsed = useState('shell:sidebar-collapsed', () => false)
@@ -68,7 +69,7 @@ onMounted(async () => {
       <UiSheet v-model:open="mobileSidebarOpen">
         <AppTopbar
           project-name="Core API"
-          workspace-name="Personal Workspace"
+          :workspace-name="currentWorkspace?.name ?? 'No workspace'"
           @open-mobile="mobileSidebarOpen = true"
         />
         <UiSheetContent

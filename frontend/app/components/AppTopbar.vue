@@ -7,6 +7,9 @@ import {
   PhCaretDown,
   PhCube,
   PhBuildings,
+  PhCheck,
+  PhGearSix,
+  PhPlus,
 } from '@phosphor-icons/vue'
 import { useMagicKeys } from '@vueuse/core'
 
@@ -20,7 +23,9 @@ defineEmits<{
 }>()
 
 const now = ref(new Date())
+const createWorkspaceOpen = ref(false)
 let clockTimer: ReturnType<typeof setInterval> | undefined
+const { workspaces, currentWorkspaceId, currentWorkspace, workspacesLoading } = useWorkspace()
 
 const currentTime = computed(() => new Intl.DateTimeFormat(undefined, {
   hour: '2-digit',
@@ -45,6 +50,7 @@ onMounted(() => {
 })
 
 const shortcutHint = computed(() => isMac.value ? '⌘ K' : 'CTRL K')
+const displayWorkspaceName = computed(() => currentWorkspace.value?.name ?? props.workspaceName)
 
 const { meta_k, ctrl_k } = useMagicKeys({
   passive: false,
@@ -79,14 +85,58 @@ onBeforeUnmount(() => {
         <UiDropdownMenu>
           <UiDropdownMenuTrigger as-child>
             <button class="group flex items-center gap-1.5 border border-transparent px-2 py-1 transition-all hover:border-primary/20 hover:bg-primary/5 active:bg-primary/10">
-              <PhBuildings class="size-2.5 text-muted-foreground/80 group-hover:text-primary transition-colors" />
-              <span class="truncate opacity-80 group-hover:opacity-100 transition-opacity">{{ workspaceName }}</span>
+             <PhBuildings class="size-2.5 text-muted-foreground/80 group-hover:text-primary transition-colors" />
+              <span class="truncate opacity-80 group-hover:opacity-100 transition-opacity">{{ displayWorkspaceName }}</span>
               <PhCaretDown class="size-2 opacity-50 group-hover:opacity-100" />
             </button>
           </UiDropdownMenuTrigger>
-          <UiDropdownMenuContent align="start" class="w-56 rounded-none border-2 p-1">
-             <UiDropdownMenuLabel class="text-[9px] font-black uppercase tracking-[0.2em] text-primary/80 p-2">Switch Workspace</UiDropdownMenuLabel>
-             <UiDropdownMenuItem class="rounded-none font-bold uppercase text-[10px]">{{ workspaceName }}</UiDropdownMenuItem>
+          <UiDropdownMenuContent align="start" class="w-72 rounded-none border-2 p-1">
+             <div class="flex items-center gap-2 border-b border-border/40 p-2">
+               <UiDropdownMenuLabel class="min-w-0 flex-1 p-0 text-[9px] font-black uppercase tracking-[0.2em] text-primary/80">
+                 Switch Workspace
+               </UiDropdownMenuLabel>
+               <UiTooltip>
+                 <UiTooltipTrigger as-child>
+                   <button
+                     class="grid size-7 place-items-center border border-primary/20 bg-primary/5 text-primary transition-colors hover:border-primary/50 hover:bg-primary/10"
+                     type="button"
+                     @click="createWorkspaceOpen = true"
+                   >
+                     <PhPlus class="size-3.5" />
+                   </button>
+                 </UiTooltipTrigger>
+                 <UiTooltipContent>Create workspace</UiTooltipContent>
+               </UiTooltip>
+             </div>
+             <div v-if="workspacesLoading" class="flex h-16 items-center justify-center">
+               <div class="size-3 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+             </div>
+             <template v-else-if="workspaces.length > 0">
+               <UiDropdownMenuItem
+                 v-for="workspace in workspaces"
+                 :key="workspace.id"
+                 class="grid grid-cols-[minmax(0,1fr)_14px] items-center gap-2 rounded-none px-2 py-2.5 font-mono text-[10px] font-black uppercase tracking-widest"
+                 :class="workspace.id === currentWorkspaceId ? 'bg-primary/8 text-primary' : 'text-muted-foreground'"
+                 @select="currentWorkspaceId = workspace.id"
+               >
+                 <span class="truncate">{{ workspace.name }}</span>
+                 <PhCheck v-if="workspace.id === currentWorkspaceId" class="size-3 text-primary" />
+               </UiDropdownMenuItem>
+             </template>
+             <div v-else class="px-2 py-4 text-center font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+               No workspaces
+             </div>
+             <div class="mt-1 border-t border-border/40 pt-1">
+               <UiDropdownMenuItem as-child class="rounded-none p-0">
+                 <NuxtLink
+                   class="flex items-center gap-2 px-2 py-2.5 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-colors hover:bg-primary/8"
+                   to="/workspaces"
+                 >
+                   <PhGearSix class="size-3.5" />
+                   Manage workspaces
+                 </NuxtLink>
+               </UiDropdownMenuItem>
+             </div>
           </UiDropdownMenuContent>
         </UiDropdownMenu>
 
@@ -150,4 +200,6 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </header>
+
+  <WorkspaceCreateModal v-model:open="createWorkspaceOpen" />
 </template>

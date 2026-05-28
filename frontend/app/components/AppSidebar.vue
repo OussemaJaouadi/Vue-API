@@ -13,6 +13,7 @@ import {
   PhMoon,
   PhSun,
   PhCheck,
+  PhBuildings,
 } from '@phosphor-icons/vue'
 import type { Component } from 'vue'
 import type { ThemePreference } from '~/composables/useThemePreference'
@@ -38,7 +39,6 @@ defineEmits<{
 const theme = useThemePreference()
 const route = useRoute()
 const { workspaces, workspacesLoading } = useWorkspace()
-const createModalOpen = ref(false)
 
 const healthLabel = computed(() => {
   if (props.healthStatus === 'ok') return 'Online'
@@ -51,6 +51,7 @@ const navItems = [
   { label: 'Collections', to: '/collections', icon: PhFolderOpen },
   { label: 'Environments', to: '/environments', icon: PhDatabase },
   { label: 'Access', to: '/access', icon: PhUsersThree },
+  { label: 'Workspaces', to: '/workspaces', icon: PhBuildings },
   { label: 'Settings', to: '/settings', icon: PhGearSix },
 ]
 
@@ -155,16 +156,14 @@ onBeforeUnmount(() => {
     <div v-if="!collapsed" class="border-b border-border/30 px-3 py-2">
       <WorkspaceSwitcher
         v-if="workspaces.length > 0"
-        @create="createModalOpen = true"
       />
-      <button
+      <NuxtLink
         v-else-if="!workspacesLoading"
         class="flex h-8 w-full items-center justify-center gap-2 border border-dashed border-primary/30 bg-primary/5 px-3 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:border-primary hover:bg-primary/10"
-        type="button"
-        @click="createModalOpen = true"
+        to="/workspaces"
       >
-        Create first workspace
-      </button>
+        Manage workspaces
+      </NuxtLink>
       <div v-else class="flex h-8 w-full items-center justify-center">
         <div class="size-3 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
       </div>
@@ -359,6 +358,4 @@ onBeforeUnmount(() => {
 
     </div>
   </aside>
-
-  <WorkspaceCreateModal v-model:open="createModalOpen" />
 </template>

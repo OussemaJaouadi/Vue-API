@@ -49,7 +49,8 @@
 
 ## New
 
-- Added workspace deletion flow in the workspace switcher with confirmation, API call, local workspace list update, and preferred-workspace fallback.
+- Added a dedicated Workspaces page for selecting, renaming, creating, and deleting workspaces; moved destructive workspace control out of the sidebar switcher.
+- Added frontend workspace deletion state handling with API call, local workspace list update, and preferred-workspace fallback.
 - Darkened `--muted-foreground` from oklch(0.552→0.45) in light mode and lightened from oklch(0.765→0.88) in dark mode for WCAG-compliant text contrast.
 - Raised fractional opacity text classes globally: `/10→/40`, `/15→/50`, `/20→/50`, `/30→/60`, `/40→/65`, `/55→/70`.
 - Raised `placeholder:text-muted-foreground` from `/20→/50` across all inputs.
