@@ -362,19 +362,22 @@ export function useWorkbench() {
   }
 
   const deleteItem = async (identifier: string, isFolder: boolean) => {
+    const wid = workspaceId.value
+    if (!wid) return
+
     try {
       const { delete: del } = useApiClient()
       if (isFolder) {
         const folder = treeItems.value.find(f => f.id === identifier || f.name === identifier)
         if (folder?.id) {
-          await del(`/v1/collections/${folder.id}`)
+          await del(`/v1/collections/${folder.id}?workspaceId=${encodeURIComponent(wid)}`)
         }
         if (folder) {
           folder.requests.forEach(r => closeTab(r.id))
         }
         treeItems.value = treeItems.value.filter(f => f.id !== identifier && f.name !== identifier)
       } else {
-        await del(`/v1/collections/requests/${identifier}`)
+        await del(`/v1/collections/requests/${identifier}?workspaceId=${encodeURIComponent(wid)}`)
         closeTab(identifier)
         rootRequests.value = rootRequests.value.filter(r => r.id !== identifier)
         treeItems.value.forEach(f => {

@@ -62,11 +62,12 @@ export function useEnvironments() {
 
   const deleteEnvironment = async () => {
     if (environments.value.length <= 1) return
+    const wid = workspaceId.value
     const env = activeEnvironment.value
-    if (!env) return
+    if (!env || !wid) return
 
     try {
-      await del(`/v1/environments/${env.id}`)
+      await del(`/v1/environments/${env.id}?workspaceId=${encodeURIComponent(wid)}`)
       const index = environments.value.findIndex((e: any) => e.id === env.id)
       environments.value = environments.value.filter((e: any) => e.id !== env.id)
       const nextEnv = environments.value[Math.max(0, index - 1)]
@@ -79,11 +80,13 @@ export function useEnvironments() {
   }
 
   const addVariable = async () => {
+    const wid = workspaceId.value
     const env = activeEnvironment.value
-    if (!env) return
+    if (!env || !wid) return
 
     try {
       const v = await post<any>(`/v1/environments/${env.id}/variables`, {
+        workspaceId: wid,
         key: 'NEW_KEY',
         value: '',
         secret: false,
@@ -95,11 +98,15 @@ export function useEnvironments() {
   }
 
   const updateVariable = async (variableId: string, updates: { key?: string; value?: string; secret?: boolean }) => {
+    const wid = workspaceId.value
     const env = activeEnvironment.value
-    if (!env) return
+    if (!env || !wid) return
 
     try {
-      const updated = await put<any>(`/v1/environments/${env.id}/variables/${variableId}`, updates)
+      const updated = await put<any>(`/v1/environments/${env.id}/variables/${variableId}`, {
+        workspaceId: wid,
+        ...updates,
+      })
       const index = env.variables.findIndex((v: any) => v.id === variableId)
       if (index !== -1) {
         env.variables[index] = updated
@@ -110,11 +117,12 @@ export function useEnvironments() {
   }
 
   const deleteVariable = async (variableId: string) => {
+    const wid = workspaceId.value
     const env = activeEnvironment.value
-    if (!env) return
+    if (!env || !wid) return
 
     try {
-      await del(`/v1/environments/${env.id}/variables/${variableId}`)
+      await del(`/v1/environments/${env.id}/variables/${variableId}?workspaceId=${encodeURIComponent(wid)}`)
       env.variables = env.variables.filter((v: any) => v.id !== variableId)
     } catch (err: any) {
       console.error('Failed to delete variable', err)
