@@ -24,6 +24,16 @@ func workspaceRoleAtLeast(role, minRole string) bool {
 	return order[role] >= order[minRole]
 }
 
+func hasWorkspacePermission(c echo.Context, memberships workspace.MembershipRepository, workspaceID string, permission string) bool {
+	user := c.Get("user").(auth.User)
+	m, err := memberships.FindByUserAndWorkspace(c.Request().Context(), user.ID, workspaceID)
+	if err != nil {
+		return false
+	}
+
+	return auth.Can(user.GlobalRole, m.Role, permission)
+}
+
 type WorkspaceRouteDeps struct {
 	Workspaces  workspace.WorkspaceRepository
 	Memberships workspace.MembershipRepository

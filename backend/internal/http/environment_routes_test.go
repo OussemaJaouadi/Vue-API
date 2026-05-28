@@ -19,6 +19,10 @@ import (
 )
 
 func environmentTestDeps(t *testing.T) (*echo.Echo, string, string) {
+	return environmentTestDepsWithRole(t, "admin")
+}
+
+func environmentTestDepsWithRole(t *testing.T, role string) (*echo.Echo, string, string) {
 	t.Helper()
 
 	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%s?mode=memory&cache=private", t.Name())), &gorm.Config{})
@@ -57,6 +61,13 @@ func environmentTestDeps(t *testing.T) (*echo.Echo, string, string) {
 		Tokens:       tokens,
 	})
 
+	managerResp := performJSON(router, http.MethodPost, "/auth/register", map[string]string{
+		"email":    "envmanager@example.com",
+		"username": "envmanager",
+		"password": "correct horse battery staple",
+	}, "")
+	require.Equal(t, http.StatusCreated, managerResp.Code)
+
 	registerResp := performJSON(router, http.MethodPost, "/auth/register", map[string]string{
 		"email":    "envtest@example.com",
 		"username": "envtest",
@@ -78,12 +89,27 @@ func environmentTestDeps(t *testing.T) (*echo.Echo, string, string) {
 	_, err = membershipRepo.Create(nil, workspace.CreateMembershipParams{
 		WorkspaceID:     ws.ID,
 		UserID:          userID,
-		Role:            "admin",
+		Role:            role,
 		CreatedByUserID: userID,
 	})
 	require.NoError(t, err)
 
 	return router, accessToken, ws.ID
+}
+
+func registerEnvironmentRouteUser(t *testing.T, router *echo.Echo, email string, username string) string {
+	t.Helper()
+
+	resp := performJSON(router, http.MethodPost, "/auth/register", map[string]string{
+		"email":    email,
+		"username": username,
+		"password": "correct horse battery staple",
+	}, "")
+	require.Equal(t, http.StatusCreated, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	return body["accessToken"].(string)
 }
 
 func TestEnvironmentRoutes_GetEnvironments_NoAuth(t *testing.T) {
@@ -122,6 +148,14 @@ func TestEnvironmentRoutes_GetEnvironments_Empty(t *testing.T) {
 	var body []any
 	json.Unmarshal(resp.Body.Bytes(), &body)
 	assert.Empty(t, body)
+}
+
+func TestEnvironmentRoutes_GetEnvironments_RequiresWorkspaceMembership(t *testing.T) {
+	router, _, wsID := environmentTestDeps(t)
+	otherToken := registerEnvironmentRouteUser(t, router, "envother@example.com", "envother")
+
+	resp := performJSON(router, http.MethodGet, "/v1/environments?workspaceId="+wsID, nil, otherToken)
+	assert.Equal(t, http.StatusForbidden, resp.Code)
 }
 
 func TestEnvironmentRoutes_GetEnvironments_WithData(t *testing.T) {
@@ -211,6 +245,16 @@ func TestEnvironmentRoutes_CreateEnvironment_Duplicate(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, resp.Code)
 }
 
+func TestEnvironmentRoutes_CreateEnvironment_RequiresManageEnvironmentPermission(t *testing.T) {
+	router, token, wsID := environmentTestDepsWithRole(t, "tester")
+
+	resp := performJSON(router, http.MethodPost, "/v1/environments", map[string]string{
+		"workspaceId": wsID,
+		"name":        "Prod",
+	}, token)
+	assert.Equal(t, http.StatusForbidden, resp.Code)
+}
+
 func TestEnvironmentRoutes_UpdateEnvironment(t *testing.T) {
 	router, token, wsID := environmentTestDeps(t)
 
@@ -235,6 +279,16 @@ func TestEnvironmentRoutes_UpdateEnvironment(t *testing.T) {
 	json.Unmarshal(updateResp.Body.Bytes(), &updateBody)
 	assert.Equal(t, "Renamed", updateBody["name"])
 	assert.Equal(t, "personal", updateBody["visibility"])
+}
+
+func TestEnvironmentRoutes_UpdateEnvironment_RequiresManageEnvironmentPermission(t *testing.T) {
+	router, token, wsID := environmentTestDepsWithRole(t, "tester")
+
+	resp := performJSON(router, http.MethodPut, "/v1/environments/some-env", map[string]string{
+		"workspaceId": wsID,
+		"name":        "Renamed",
+	}, token)
+	assert.Equal(t, http.StatusForbidden, resp.Code)
 }
 
 func TestEnvironmentRoutes_UpdateEnvironment_NotFound(t *testing.T) {

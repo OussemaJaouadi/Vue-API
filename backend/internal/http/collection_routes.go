@@ -27,6 +27,9 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		if workspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
 		}
+		if !hasWorkspacePermission(c, deps.Memberships, workspaceID, auth.PermissionViewCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized for this workspace")
+		}
 
 		folders, err := deps.Collections.ListFolders(c.Request().Context(), workspaceID)
 		if err != nil {
@@ -94,6 +97,9 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		if req.WorkspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
 		}
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
+		}
 
 		folder, err := deps.Collections.CreateFolder(c.Request().Context(), collection.CreateFolderParams{
 			WorkspaceID: req.WorkspaceID,
@@ -126,8 +132,8 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		if req.WorkspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
 		}
-		if !hasWorkspaceRole(c, deps.Memberships, req.WorkspaceID, "tester") {
-			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
 		}
 
 		folder, err := deps.Collections.UpdateFolder(c.Request().Context(), c.Param("id"), collection.UpdateFolderParams{
@@ -153,8 +159,8 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		if workspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
 		}
-		if !hasWorkspaceRole(c, deps.Memberships, workspaceID, "tester") {
-			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		if !hasWorkspacePermission(c, deps.Memberships, workspaceID, auth.PermissionManageCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
 		}
 
 		if err := deps.Collections.DeleteFolder(c.Request().Context(), c.Param("id")); err != nil {
@@ -183,6 +189,9 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		}
 		if req.WorkspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
+		}
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
 		}
 
 		method := req.Method
@@ -222,8 +231,8 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		if req.WorkspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
 		}
-		if !hasWorkspaceRole(c, deps.Memberships, req.WorkspaceID, "tester") {
-			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
 		}
 
 		request, err := deps.Collections.UpdateRequest(c.Request().Context(), c.Param("id"), collection.UpdateRequestParams{
@@ -251,8 +260,8 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		if workspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
 		}
-		if !hasWorkspaceRole(c, deps.Memberships, workspaceID, "tester") {
-			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		if !hasWorkspacePermission(c, deps.Memberships, workspaceID, auth.PermissionManageCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
 		}
 
 		if err := deps.Collections.DeleteRequest(c.Request().Context(), c.Param("id")); err != nil {

@@ -27,6 +27,9 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 		if workspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
 		}
+		if !hasWorkspaceRole(c, deps.Memberships, workspaceID, auth.ScopedRoleTester) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized for this workspace")
+		}
 
 		envs, err := deps.Environments.ListEnvironments(c.Request().Context(), workspaceID)
 		if err != nil {
@@ -81,6 +84,9 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 		if req.WorkspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
 		}
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageEnvironment) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage environments")
+		}
 
 		env, err := deps.Environments.CreateEnvironment(c.Request().Context(), environment.CreateEnvironmentParams{
 			WorkspaceID: req.WorkspaceID,
@@ -113,8 +119,8 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 		if req.WorkspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
 		}
-		if !hasWorkspaceRole(c, deps.Memberships, req.WorkspaceID, "tester") {
-			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageEnvironment) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage environments")
 		}
 
 		env, err := deps.Environments.UpdateEnvironment(c.Request().Context(), c.Param("id"), environment.UpdateEnvironmentParams{
@@ -140,8 +146,8 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 		if workspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
 		}
-		if !hasWorkspaceRole(c, deps.Memberships, workspaceID, "tester") {
-			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		if !hasWorkspacePermission(c, deps.Memberships, workspaceID, auth.PermissionManageEnvironment) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage environments")
 		}
 
 		if err := deps.Environments.DeleteEnvironment(c.Request().Context(), c.Param("id")); err != nil {
@@ -167,8 +173,8 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 		if req.WorkspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
 		}
-		if !hasWorkspaceRole(c, deps.Memberships, req.WorkspaceID, "tester") {
-			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageEnvironment) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage environments")
 		}
 		if req.Key == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "key is required")
@@ -211,8 +217,8 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 		if req.WorkspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
 		}
-		if !hasWorkspaceRole(c, deps.Memberships, req.WorkspaceID, "tester") {
-			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageEnvironment) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage environments")
 		}
 
 		v, err := deps.Environments.UpdateVariable(c.Request().Context(), c.Param("id"), environment.UpdateVariableParams{
@@ -240,8 +246,8 @@ func RegisterEnvironmentRoutes(router *echo.Echo, deps EnvironmentRouteDeps) {
 		if workspaceID == "" {
 			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
 		}
-		if !hasWorkspaceRole(c, deps.Memberships, workspaceID, "tester") {
-			return echo.NewHTTPError(http.StatusForbidden, "Not a member of this workspace")
+		if !hasWorkspacePermission(c, deps.Memberships, workspaceID, auth.PermissionManageEnvironment) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage environments")
 		}
 
 		if err := deps.Environments.DeleteVariable(c.Request().Context(), c.Param("id")); err != nil {
