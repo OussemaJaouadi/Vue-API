@@ -2,6 +2,7 @@ package gormstorage
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -104,12 +105,53 @@ func PendingMigrationPlan(db *gorm.DB, dir string) (SchemaPlan, error) {
 }
 
 func ApplyMigrationFiles(db *gorm.DB, dir string) error {
+	if err := reconcileAppliedMigrationFiles(db, dir); err != nil {
+		return err
+	}
+
 	files, err := pendingMigrationFiles(db, dir)
 	if err != nil {
 		return err
 	}
 
 	return applyMigrationFileList(db, files, true)
+}
+
+func reconcileAppliedMigrationFiles(db *gorm.DB, dir string) error {
+	files, err := listMigrationFiles(dir)
+	if err != nil || len(files) == 0 {
+		return err
+	}
+
+	if err := VerifySchema(db); err != nil {
+		if errors.Is(err, ErrSchemaOutOfDate) {
+			return nil
+		}
+		return err
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := ensureSchemaMigrationsTable(tx); err != nil {
+			return err
+		}
+
+		applied, err := appliedMigrationVersions(tx)
+		if err != nil {
+			return err
+		}
+
+		now := time.Now().UTC()
+		for _, file := range files {
+			if applied[file.Version] {
+				continue
+			}
+			if err := tx.Exec("INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)", file.Version, file.Name, now).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
 func applyMigrationFileList(db *gorm.DB, files []MigrationFile, recordApplied bool) error {

@@ -80,6 +80,23 @@ func TestGeneratePlanUsesExistingMigrationFilesAsBaseline(t *testing.T) {
 	require.False(t, plan.HasChanges())
 }
 
+func TestApplyMigrationFilesAdoptsAlreadyCurrentSchema(t *testing.T) {
+	db := openTestDB(t)
+	dir := t.TempDir()
+
+	plan, err := gormstorage.Plan(db)
+	require.NoError(t, err)
+	_, err = gormstorage.GenerateMigrationFile(dir, "initial_schema", plan, time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC))
+	require.NoError(t, err)
+
+	require.NoError(t, gormstorage.Migrate(db))
+	require.NoError(t, gormstorage.ApplyMigrationFiles(db, dir))
+
+	pending, err := gormstorage.PendingMigrationPlan(db, dir)
+	require.NoError(t, err)
+	require.False(t, pending.HasChanges())
+}
+
 func TestPlanReportsManualColumnChanges(t *testing.T) {
 	db := openTestDB(t)
 	require.NoError(t, db.Exec(`
