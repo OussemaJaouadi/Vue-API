@@ -86,6 +86,8 @@ export interface WorkbenchResponse {
   error?: string
 }
 
+export type RequestSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
 export const API_METHODS: ApiMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'SOCKET']
 
 export const METHOD_LABELS: Record<ApiMethod, string> = {
@@ -278,6 +280,8 @@ export function useWorkbench() {
   const requestBody = useState<string>('workbench:body', () => '')
   const requestBodyLanguage = useState<BodyLanguage>('workbench:body-language', () => 'json')
   const requestAuthConfig = useState<RequestAuthConfig>('workbench:auth-config', defaultRequestAuthConfig)
+  const requestSaveStatus = useState<RequestSaveStatus>('workbench:request-save-status', () => 'idle')
+  const requestSaveError = useState<string>('workbench:request-save-error', () => '')
   const webSocketState = useState<WebSocketConnectionState>('workbench:ws-state', () => 'idle')
   const webSocketMessage = useState<string>('workbench:ws-message', () => `{
   "type": "ping",
@@ -355,6 +359,12 @@ export function useWorkbench() {
 
   watch(activeRequestId, hydrateActiveRequestState)
   watch([queryParams, headers, requestBody, requestBodyLanguage, requestAuthConfig], syncActiveRequestState, { deep: true })
+  watch([queryParams, headers, requestBody, requestBodyLanguage, requestAuthConfig], () => {
+    if (requestSaveStatus.value === 'saving') return
+
+    requestSaveStatus.value = 'idle'
+    requestSaveError.value = ''
+  }, { deep: true })
 
   const addFolder = async (name: string = 'New Collection') => {
     const wid = workspaceId.value
@@ -519,20 +529,29 @@ export function useWorkbench() {
     syncActiveRequestState()
 
     const { put } = useApiClient()
-    const updated = await put<any>(`/v1/collections/requests/${request.id}`, {
-      workspaceId: wid,
-      method: request.method,
-      name: request.name,
-      path: request.path,
-      queryParams: activeRows(queryParams.value),
-      headers: activeRows(headers.value),
-      body: requestBody.value,
-      bodyLanguage: requestBodyLanguage.value,
-      authConfig: requestAuthConfig.value,
-    })
+    requestSaveStatus.value = 'saving'
+    requestSaveError.value = ''
 
-    Object.assign(request, requestFromApi(updated))
-    hydrateActiveRequestState()
+    try {
+      const updated = await put<any>(`/v1/collections/requests/${request.id}`, {
+        workspaceId: wid,
+        method: request.method,
+        name: request.name,
+        path: request.path,
+        queryParams: activeRows(queryParams.value),
+        headers: activeRows(headers.value),
+        body: requestBody.value,
+        bodyLanguage: requestBodyLanguage.value,
+        authConfig: requestAuthConfig.value,
+      })
+
+      Object.assign(request, requestFromApi(updated))
+      hydrateActiveRequestState()
+      requestSaveStatus.value = 'saved'
+    } catch (err: any) {
+      requestSaveStatus.value = 'error'
+      requestSaveError.value = err?.data?.error || err?.message || 'Failed to save request'
+    }
   }
 
   const executeActiveRequest = async () => {
@@ -724,6 +743,8 @@ export function useWorkbench() {
     requestBody,
     requestBodyLanguage,
     requestAuthConfig,
+    requestSaveStatus,
+    requestSaveError,
     webSocketState,
     webSocketMessage,
     webSocketMessageLanguage,

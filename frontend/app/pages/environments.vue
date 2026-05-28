@@ -16,6 +16,7 @@ const {
   handleCreate,
   deleteEnvironment,
   addVariable,
+  loadEnvironments,
 } = useEnvironments()
 
 const createOpen = ref(false)
@@ -30,7 +31,7 @@ const createOpen = ref(false)
 
     <div class="flex-1 flex min-w-0 gap-3 overflow-x-auto p-3 bg-muted/5">
       <EnvironmentsRoster
-        :loading="false"
+        :loading="envsLoading"
         :environments="environments"
         :active-environment-name="activeEnvironmentName"
         @select="name => activeEnvironmentName = name"

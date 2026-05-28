@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import {
   PhCaretDown,
+  PhCheck,
   PhCircleNotch,
   PhPaperPlaneTilt,
   PhShieldCheck,
   PhFloppyDisk,
+  PhWarning,
 } from '@phosphor-icons/vue'
 import {
   API_METHODS,
@@ -20,6 +22,13 @@ const setMethod = (method: ApiMethod) => {
 }
 
 const isActiveMethod = (method: ApiMethod) => workbench.activeRequest.value.method === method
+
+const saveLabel = computed(() => {
+  if (workbench.requestSaveStatus.value === 'saving') return 'Saving request'
+  if (workbench.requestSaveStatus.value === 'saved') return 'Request saved'
+  if (workbench.requestSaveStatus.value === 'error') return workbench.requestSaveError.value || 'Save failed'
+  return 'Persist State'
+})
 
 const methodRowClass = (method: ApiMethod) => {
   if (isActiveMethod(method)) {
@@ -114,10 +123,18 @@ const fullUrl = computed({
               type="button"
               @click="workbench.saveActiveRequestState"
             >
-              <PhFloppyDisk class="size-4" />
+              <PhCircleNotch v-if="workbench.requestSaveStatus.value === 'saving'" class="size-4 animate-spin" />
+              <PhCheck v-else-if="workbench.requestSaveStatus.value === 'saved'" class="size-4 text-primary" />
+              <PhWarning v-else-if="workbench.requestSaveStatus.value === 'error'" class="size-4 text-destructive" />
+              <PhFloppyDisk v-else class="size-4" />
             </button>
           </UiTooltipTrigger>
-          <UiTooltipContent side="bottom">Persist State</UiTooltipContent>
+          <UiTooltipContent
+            side="bottom"
+            :class="workbench.requestSaveStatus.value === 'error' && 'border-destructive/30 text-destructive'"
+          >
+            {{ saveLabel }}
+          </UiTooltipContent>
         </UiTooltip>
       </div>
     </div>

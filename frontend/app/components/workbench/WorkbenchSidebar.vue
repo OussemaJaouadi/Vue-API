@@ -165,6 +165,28 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
         </div>
       </template>
 
+      <!-- Error State -->
+      <template v-else-if="workbench.collectionsError.value">
+        <div class="flex flex-col items-center gap-3 px-5 pt-12 text-center">
+          <div class="grid size-12 place-items-center border-2 border-dashed border-destructive/25 bg-destructive/5 text-destructive/40">
+            <PhGlobe class="size-6" />
+          </div>
+          <div>
+            <p class="font-mono text-[10px] font-black uppercase tracking-widest text-destructive">Load Failed</p>
+            <p class="mt-1 line-clamp-3 font-mono text-[9px] leading-relaxed text-muted-foreground/55">
+              {{ workbench.collectionsError.value }}
+            </p>
+          </div>
+          <button
+            class="border-2 border-destructive/30 bg-destructive/8 px-3 py-2 font-mono text-[9px] font-black uppercase tracking-widest text-destructive transition-all hover:bg-destructive/15 active:translate-x-0.5 active:translate-y-0.5"
+            type="button"
+            @click="workbench.loadCollections()"
+          >
+            Retry
+          </button>
+        </div>
+      </template>
+
       <!-- Empty State -->
       <template v-else-if="workbench.rootRequests.value.length === 0 && workbench.treeItems.value.length === 0">
         <div class="flex flex-col items-center gap-3 px-6 pt-12 text-center">
