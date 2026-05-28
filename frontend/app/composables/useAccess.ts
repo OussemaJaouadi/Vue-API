@@ -17,6 +17,7 @@ export function useAccess() {
   const usersLoading = useState<boolean>('access:loading', () => true)
   const usersError = useState<string | null>('access:error', () => null)
   const selectedUserId = useState<string>('access:selected-user', () => '')
+  const usersWorkspaceId = useState<string>('access:workspace-id', () => '')
 
   const selectedUser = computed(() => users.value.find(user => user.id === selectedUserId.value) ?? users.value[0])
 
@@ -85,16 +86,41 @@ export function useAccess() {
       if (data.length > 0 && !selectedUserId.value) {
         selectedUserId.value = data[0].userId
       }
+      usersWorkspaceId.value = wid
     } catch (err: any) {
+      users.value = []
+      selectedUserId.value = ''
+      usersWorkspaceId.value = ''
       usersError.value = err?.data?.error || err?.message || 'Failed to load workspace members'
     } finally {
       usersLoading.value = false
     }
   }
 
-  watch(workspaceId, () => {
-    loadUsers()
-  }, { immediate: true })
+  const settleUsersState = () => {
+    if (workspacesLoading.value) {
+      usersLoading.value = true
+      usersError.value = null
+      return
+    }
+
+    if (!workspaceId.value) {
+      users.value = []
+      selectedUserId.value = ''
+      usersWorkspaceId.value = ''
+      usersLoading.value = false
+      return
+    }
+
+    if (usersWorkspaceId.value !== workspaceId.value) {
+      loadUsers()
+      return
+    }
+
+    usersLoading.value = false
+  }
+
+  watch([workspaceId, workspacesLoading], settleUsersState, { immediate: true })
 
   const collectionEntries = computed(() =>
     workbench.treeItems.value.map(group => ({

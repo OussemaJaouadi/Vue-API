@@ -117,30 +117,36 @@ export function useWorkbench() {
   const rootRequests = useState<RequestItem[]>('workbench:root-requests', () => [])
   const collectionsLoading = useState<boolean>('workbench:collections-loading', () => true)
   const collectionsError = useState<string | null>('workbench:collections-error', () => null)
+  const collectionsWorkspaceId = useState<string>('workbench:collections-workspace-id', () => '')
 
   const workspaceId = useState<string>('workspace:id', () => '')
   const workspacesLoading = useState<boolean>('workspaces:loading', () => false)
 
-  onMounted(() => {
-    if (treeItems.value.length === 0) {
-      if (workspaceId.value) {
-        loadCollections()
-      } else if (!workspacesLoading.value) {
-        collectionsLoading.value = false
-      }
-    } else {
+  const settleCollectionsState = () => {
+    if (workspacesLoading.value) {
+      collectionsLoading.value = true
+      collectionsError.value = null
+      return
+    }
+
+    if (!workspaceId.value) {
+      treeItems.value = []
+      rootRequests.value = []
+      collectionsWorkspaceId.value = ''
       collectionsLoading.value = false
+      return
     }
-  })
-  watch(workspaceId, (id) => {
-    if (treeItems.value.length === 0) {
-      if (id) {
-        loadCollections()
-      } else if (!workspacesLoading.value) {
-        collectionsLoading.value = false
-      }
+
+    if (collectionsWorkspaceId.value !== workspaceId.value) {
+      loadCollections()
+      return
     }
-  })
+
+    collectionsLoading.value = false
+  }
+
+  onMounted(settleCollectionsState)
+  watch([workspaceId, workspacesLoading], settleCollectionsState)
 
   const loadCollections = async () => {
     const wid = workspaceId.value
@@ -170,7 +176,11 @@ export function useWorkbench() {
         name: r.name,
         path: r.path,
       }))
+      collectionsWorkspaceId.value = wid
     } catch (err: any) {
+      treeItems.value = []
+      rootRequests.value = []
+      collectionsWorkspaceId.value = ''
       collectionsError.value = err?.data?.error || err?.message || 'Failed to load collections'
     } finally {
       collectionsLoading.value = false

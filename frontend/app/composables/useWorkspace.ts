@@ -2,17 +2,25 @@ import type { Workspace } from '~/types/workspace'
 
 export function useWorkspace() {
   const { get, post, put } = useApiClient()
+  const auth = useAuthSession()
 
   const workspaces = useState<Workspace[]>('workspaces', () => [])
   const currentWorkspaceId = useState<string>('workspace:id', () => '')
   const workspacesLoading = useState<boolean>('workspaces:loading', () => false)
+  const workspacesError = useState<string | null>('workspaces:error', () => null)
 
   const currentWorkspace = computed(() =>
     workspaces.value.find(w => w.id === currentWorkspaceId.value) ?? workspaces.value[0]
   )
 
   const loadWorkspaces = async () => {
+    if (!auth.accessToken.value) {
+      workspacesLoading.value = false
+      return
+    }
+
     workspacesLoading.value = true
+    workspacesError.value = null
     try {
       const data = await get<any[]>('/v1/workspaces')
       workspaces.value = data
@@ -27,8 +35,10 @@ export function useWorkspace() {
       } else {
         currentWorkspaceId.value = ''
       }
-    } catch (err) {
-      console.error('Failed to load workspaces', err)
+    } catch (err: any) {
+      workspacesError.value = err?.data?.error || err?.message || 'Failed to load workspaces'
+      workspaces.value = []
+      currentWorkspaceId.value = ''
     } finally {
       workspacesLoading.value = false
     }
@@ -50,18 +60,27 @@ export function useWorkspace() {
   }
 
   watch(currentWorkspaceId, (id) => {
-    if (id) {
+    if (import.meta.client && id) {
       localStorage.setItem('preferredWorkspaceId', id)
     }
   })
 
-  if (workspaces.value.length === 0 && !workspacesLoading.value) {
-    loadWorkspaces()
-  }
+  watch(() => auth.accessToken.value, (token) => {
+    if (token && workspaces.value.length === 0 && !workspacesLoading.value) {
+      loadWorkspaces()
+    }
+    if (!token) {
+      workspaces.value = []
+      currentWorkspaceId.value = ''
+      workspacesLoading.value = false
+      workspacesError.value = null
+    }
+  }, { immediate: import.meta.client })
 
   return {
     workspaces,
     workspacesLoading,
+    workspacesError,
     currentWorkspaceId,
     currentWorkspace,
     loadWorkspaces,

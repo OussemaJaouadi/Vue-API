@@ -5,6 +5,7 @@ export function useEnvironments() {
   const activeEnvironmentName = useState<string>('environments:active', () => '')
   const envsLoading = useState<boolean>('environments:loading', () => true)
   const envsError = useState<string | null>('environments:error', () => null)
+  const envsWorkspaceId = useState<string>('environments:workspace-id', () => '')
 
   const loadEnvironments = async () => {
     const wid = workspaceId.value
@@ -17,10 +18,14 @@ export function useEnvironments() {
     try {
       const data = await get<any[]>(`/v1/environments?workspaceId=${wid}`)
       environments.value = data
+      envsWorkspaceId.value = wid
       if (data.length > 0 && !activeEnvironmentName.value) {
         activeEnvironmentName.value = data[0].name
       }
     } catch (err: any) {
+      environments.value = []
+      activeEnvironmentName.value = ''
+      envsWorkspaceId.value = ''
       envsError.value = err?.data?.error || err?.message || 'Failed to load environments'
     } finally {
       envsLoading.value = false
@@ -29,9 +34,31 @@ export function useEnvironments() {
 
   const workspaceId = useState<string>('workspace:id', () => '')
   const workspacesLoading = useState<boolean>('workspaces:loading', () => false)
-  watch(workspaceId, () => {
-    loadEnvironments()
-  }, { immediate: true })
+
+  const settleEnvironmentState = () => {
+    if (workspacesLoading.value) {
+      envsLoading.value = true
+      envsError.value = null
+      return
+    }
+
+    if (!workspaceId.value) {
+      environments.value = []
+      activeEnvironmentName.value = ''
+      envsWorkspaceId.value = ''
+      envsLoading.value = false
+      return
+    }
+
+    if (envsWorkspaceId.value !== workspaceId.value) {
+      loadEnvironments()
+      return
+    }
+
+    envsLoading.value = false
+  }
+
+  watch([workspaceId, workspacesLoading], settleEnvironmentState, { immediate: true })
 
   const activeEnvironment = computed(() => {
     if (!activeEnvironmentName.value) return environments.value[0]
