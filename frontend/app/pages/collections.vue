@@ -21,7 +21,7 @@ const {
   toggleCollection,
   exportCollections,
   importCollections,
-  detectJsonImport,
+  previewImportContent,
 } = useCollections()
 
 const importInput = ref<HTMLInputElement | null>(null)
@@ -41,39 +41,21 @@ const previewImportFile = async (event: Event) => {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
 
-  const extension = file.name.split('.').pop()?.toLowerCase()
-  if (extension === 'yaml' || extension === 'yml') {
-    importPayload.value = null
-    importPreview.value = {
-      fileName: file.name,
-      format: 'YAML spec',
-      status: 'unsupported',
-      summary: 'YAML upload selected',
-      details: ['YAML parsing belongs in the backend parser service.', 'The UI accepts the file type so the flow is visible now.'],
-    }
-    importOpen.value = true
-    return
-  }
-
   try {
     const content = await file.text()
-    const parsed = JSON.parse(content)
-    const detected = detectJsonImport(parsed)
-    importPayload.value = detected.status === 'ready' ? parsed : null
-    importPreview.value = {
-      fileName: file.name,
-      ...detected,
-    }
+    const preview = await previewImportContent(file.name, content)
+    importPayload.value = preview.status === 'ready' ? JSON.parse(content) : null
+    importPreview.value = preview
     importOpen.value = true
   }
-  catch (error) {
+  catch (error: any) {
     importPayload.value = null
     importPreview.value = {
       fileName: file.name,
-      format: 'Invalid JSON',
+      format: 'Preview failed',
       status: 'error',
-      summary: 'Could not parse file',
-      details: ['Check that the file is valid JSON before importing.'],
+      summary: error?.data?.error || error?.message || 'Could not preview file',
+      details: ['The backend preview endpoint could not inspect this file.'],
     }
     importOpen.value = true
   }

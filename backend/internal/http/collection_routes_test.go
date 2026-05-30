@@ -380,6 +380,75 @@ func TestCollectionRoutes_ImportRequiresManageCollectionsPermission(t *testing.T
 	assert.Equal(t, http.StatusForbidden, resp.Code)
 }
 
+func TestCollectionRoutes_PreviewWorkbenchImport(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import/preview", map[string]any{
+		"workspaceId": wsID,
+		"fileName":    "collections.json",
+		"content": `{
+			"schema": "vue-api-workbench.collection.v1",
+			"collections": [
+				{"name": "Authentication", "requests": [{"name": "Login"}, {"name": "Me"}]}
+			],
+			"rootRequests": [{"name": "Health"}]
+		}`,
+	}, token)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.Equal(t, "collections.json", body["fileName"])
+	assert.Equal(t, "Workbench export", body["format"])
+	assert.Equal(t, "ready", body["status"])
+	assert.Equal(t, "1 collections / 3 requests", body["summary"])
+}
+
+func TestCollectionRoutes_PreviewUnsupportedOpenAPIImport(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import/preview", map[string]any{
+		"workspaceId": wsID,
+		"fileName":    "openapi.json",
+		"content":     `{"openapi":"3.1.0","paths":{"/healthz":{"get":{}}}}`,
+	}, token)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.Equal(t, "OpenAPI 3.1.0", body["format"])
+	assert.Equal(t, "unsupported", body["status"])
+	assert.Equal(t, "1 paths detected", body["summary"])
+}
+
+func TestCollectionRoutes_PreviewInvalidJSONImport(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import/preview", map[string]any{
+		"workspaceId": wsID,
+		"fileName":    "broken.json",
+		"content":     `{`,
+	}, token)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.Equal(t, "Invalid JSON", body["format"])
+	assert.Equal(t, "error", body["status"])
+}
+
+func TestCollectionRoutes_PreviewImportRequiresWorkspaceMembership(t *testing.T) {
+	router, _, wsID := collectionTestDeps(t)
+	otherToken := registerCollectionRouteUser(t, router, "preview-other@example.com", "previewother")
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import/preview", map[string]any{
+		"workspaceId": wsID,
+		"fileName":    "collections.json",
+		"content":     `{}`,
+	}, otherToken)
+	assert.Equal(t, http.StatusForbidden, resp.Code)
+}
+
 func TestCollectionRoutes_ExportWorkbenchData(t *testing.T) {
 	router, token, wsID := collectionTestDeps(t)
 

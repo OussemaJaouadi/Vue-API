@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -21,6 +22,14 @@ type ImportResult struct {
 	CollectionsCreated int
 	RequestsCreated    int
 	Warnings           []string
+}
+
+type ImportPreview struct {
+	FileName string   `json:"fileName"`
+	Format   string   `json:"format"`
+	Status   string   `json:"status"`
+	Summary  string   `json:"summary"`
+	Details  []string `json:"details"`
 }
 
 type workbenchExport struct {
@@ -127,6 +136,125 @@ func ImportWorkbenchExport(ctx context.Context, repo Repository, workspaceID str
 	}
 
 	return result, nil
+}
+
+func PreviewImportContent(fileName string, content string) ImportPreview {
+	extension := strings.ToLower(filepath.Ext(fileName))
+	if extension == ".yaml" || extension == ".yml" {
+		return ImportPreview{
+			FileName: fileName,
+			Format:   "YAML spec",
+			Status:   "unsupported",
+			Summary:  "YAML upload selected",
+			Details: []string{
+				"YAML parsing belongs in the backend parser service.",
+				"The UI accepts the file type so the flow is visible now.",
+			},
+		}
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(content), &payload); err != nil {
+		return ImportPreview{
+			FileName: fileName,
+			Format:   "Invalid JSON",
+			Status:   "error",
+			Summary:  "Could not parse file",
+			Details:  []string{"Check that the file is valid JSON before importing."},
+		}
+	}
+
+	if payload["schema"] == WorkbenchExportSchema {
+		collections := arrayValue(payload["collections"])
+		rootRequests := arrayValue(payload["rootRequests"])
+		requests := len(rootRequests)
+		for _, collectionValue := range collections {
+			collectionObject, ok := collectionValue.(map[string]any)
+			if !ok {
+				continue
+			}
+			requests += len(arrayValue(collectionObject["requests"]))
+		}
+
+		return ImportPreview{
+			FileName: fileName,
+			Format:   "Workbench export",
+			Status:   "ready",
+			Summary:  fmt.Sprintf("%d collections / %d requests", len(collections), requests),
+			Details: []string{
+				"Ready for backend persistence.",
+				"Collections and request order will be stored in the selected workspace.",
+			},
+		}
+	}
+
+	if version, ok := payload["openapi"].(string); ok && version != "" {
+		paths := objectValue(payload["paths"])
+		return ImportPreview{
+			FileName: fileName,
+			Format:   fmt.Sprintf("OpenAPI %s", version),
+			Status:   "unsupported",
+			Summary:  fmt.Sprintf("%d paths detected", len(paths)),
+			Details: []string{
+				"Backend detected the spec shape.",
+				"Parser adapter will map operations into folders and requests.",
+			},
+		}
+	}
+
+	if payload["swagger"] == "2.0" {
+		paths := objectValue(payload["paths"])
+		return ImportPreview{
+			FileName: fileName,
+			Format:   "Swagger 2.0",
+			Status:   "unsupported",
+			Summary:  fmt.Sprintf("%d paths detected", len(paths)),
+			Details: []string{
+				"Backend detected the legacy spec shape.",
+				"Parser adapter will normalize it before import.",
+			},
+		}
+	}
+
+	if _, ok := payload["item"]; ok {
+		items := arrayValue(payload["item"])
+		return ImportPreview{
+			FileName: fileName,
+			Format:   "Postman collection",
+			Status:   "unsupported",
+			Summary:  fmt.Sprintf("%d top-level items detected", len(items)),
+			Details: []string{
+				"Backend detected a Postman collection.",
+				"Postman normalization is documented as a later parser adapter.",
+			},
+		}
+	}
+
+	return ImportPreview{
+		FileName: fileName,
+		Format:   "Unknown JSON",
+		Status:   "error",
+		Summary:  "No supported collection shape detected",
+		Details:  []string{"Expected Workbench export, OpenAPI, Swagger, or Postman collection JSON."},
+	}
+}
+
+func arrayValue(value any) []any {
+	values, ok := value.([]any)
+	if !ok {
+		return nil
+	}
+
+	return values
+}
+
+func objectValue(value any) map[string]any {
+	values, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	return values
 }
 
 func ExportWorkbenchExport(ctx context.Context, repo Repository, workspaceID string, exportedAt time.Time) (workbenchExport, error) {

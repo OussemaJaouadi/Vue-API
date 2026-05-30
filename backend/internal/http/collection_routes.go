@@ -167,6 +167,28 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		})
 	})
 
+	g.POST("/import/preview", func(c echo.Context) error {
+		var req struct {
+			WorkspaceID string `json:"workspaceId"`
+			FileName    string `json:"fileName"`
+			Content     string `json:"content"`
+		}
+		if err := c.Bind(&req); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		}
+		if req.WorkspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
+		}
+		if req.FileName == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "fileName is required")
+		}
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionViewCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized for this workspace")
+		}
+
+		return c.JSON(http.StatusOK, collection.PreviewImportContent(req.FileName, req.Content))
+	})
+
 	g.PUT("/:id", func(c echo.Context) error {
 		var req struct {
 			WorkspaceID string  `json:"workspaceId"`

@@ -4,6 +4,7 @@
 
 ## New
 
+- Added backend import preview endpoint for Workbench, OpenAPI, Swagger, Postman, YAML, invalid JSON, and unknown JSON detection.
 - Added native Workbench collection export backend endpoint with workspace permission checks and persisted request payload serialization.
 - Added native Workbench collection import backend endpoint with workspace permission checks, duplicate collection renaming, request persistence, and order preservation.
 - Added workspace deletion with admin/manager authorization and transactional cleanup of grants, memberships, collections, requests, environments, and variables.
@@ -51,6 +52,7 @@
 
 ## New
 
+- Moved collection import preview detection from frontend-only logic to the backend preview endpoint.
 - Added import/export feedback on the collections page with busy export state and success/failure toasts.
 - Wired the collections export action to download the backend export payload instead of serializing stale local state.
 - Wired the collections import confirmation flow to the backend import endpoint and reloads collections after successful ingestion.
