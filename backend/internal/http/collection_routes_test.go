@@ -250,6 +250,136 @@ func TestCollectionRoutes_CreateFolder_RequiresManageCollectionsPermission(t *te
 	assert.Equal(t, http.StatusForbidden, resp.Code)
 }
 
+func TestCollectionRoutes_ImportWorkbenchExport(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import", map[string]any{
+		"workspaceId": wsID,
+		"payload": map[string]any{
+			"schema": "vue-api-workbench.collection.v1",
+			"collections": []any{
+				map[string]any{
+					"name": "Authentication",
+					"icon": "PhKey",
+					"requests": []any{
+						map[string]any{
+							"method":       "POST",
+							"name":         "Login",
+							"path":         "/auth/login",
+							"queryParams":  []any{map[string]any{"id": "q1", "key": "include_meta", "value": "true", "enabled": true}},
+							"headers":      []any{map[string]any{"id": "h1", "key": "Content-Type", "value": "application/json", "enabled": true}},
+							"body":         `{"login":"owner@example.com"}`,
+							"bodyLanguage": "json",
+							"authConfig":   map[string]any{"mode": "none"},
+						},
+						map[string]any{
+							"method": "GET",
+							"name":   "Current user",
+							"path":   "/auth/me",
+						},
+					},
+				},
+			},
+			"rootRequests": []any{
+				map[string]any{
+					"method": "GET",
+					"name":   "Health",
+					"path":   "/healthz",
+				},
+			},
+		},
+	}, token)
+	require.Equal(t, http.StatusCreated, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.Equal(t, "Workbench export", body["format"])
+	assert.Equal(t, float64(1), body["collectionsCreated"])
+	assert.Equal(t, float64(3), body["requestsCreated"])
+
+	getResp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId="+wsID, nil, token)
+	require.Equal(t, http.StatusOK, getResp.Code)
+
+	var collectionsBody map[string]any
+	require.NoError(t, json.Unmarshal(getResp.Body.Bytes(), &collectionsBody))
+	collections := collectionsBody["collections"].([]any)
+	require.Len(t, collections, 1)
+	imported := collections[0].(map[string]any)
+	assert.Equal(t, "Authentication", imported["name"])
+	assert.Equal(t, "PhKey", imported["icon"])
+
+	requests := imported["requests"].([]any)
+	require.Len(t, requests, 2)
+	assert.Equal(t, "Login", requests[0].(map[string]any)["name"])
+	assert.Equal(t, float64(0), requests[0].(map[string]any)["sortOrder"])
+	assert.Equal(t, "Current user", requests[1].(map[string]any)["name"])
+	assert.Equal(t, float64(1), requests[1].(map[string]any)["sortOrder"])
+
+	rootRequests := collectionsBody["rootRequests"].([]any)
+	require.Len(t, rootRequests, 1)
+	assert.Equal(t, "Health", rootRequests[0].(map[string]any)["name"])
+}
+
+func TestCollectionRoutes_ImportWorkbenchExport_RenamesDuplicateCollection(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	createResp := performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
+		"workspaceId": wsID,
+		"name":        "Authentication",
+	}, token)
+	require.Equal(t, http.StatusCreated, createResp.Code)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import", map[string]any{
+		"workspaceId": wsID,
+		"payload": map[string]any{
+			"schema": "vue-api-workbench.collection.v1",
+			"collections": []any{
+				map[string]any{
+					"name":     "Authentication",
+					"requests": []any{},
+				},
+			},
+		},
+	}, token)
+	require.Equal(t, http.StatusCreated, resp.Code)
+
+	getResp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId="+wsID, nil, token)
+	require.Equal(t, http.StatusOK, getResp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(getResp.Body.Bytes(), &body))
+	collections := body["collections"].([]any)
+	require.Len(t, collections, 2)
+	assert.Equal(t, "Authentication", collections[0].(map[string]any)["name"])
+	assert.Equal(t, "Authentication (import 2)", collections[1].(map[string]any)["name"])
+}
+
+func TestCollectionRoutes_ImportUnsupportedPayload(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import", map[string]any{
+		"workspaceId": wsID,
+		"payload": map[string]any{
+			"openapi": "3.1.0",
+			"paths":   map[string]any{},
+		},
+	}, token)
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+}
+
+func TestCollectionRoutes_ImportRequiresManageCollectionsPermission(t *testing.T) {
+	router, token, wsID := collectionTestDepsWithRole(t, "tester")
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import", map[string]any{
+		"workspaceId": wsID,
+		"payload": map[string]any{
+			"schema":      "vue-api-workbench.collection.v1",
+			"collections": []any{},
+		},
+	}, token)
+	assert.Equal(t, http.StatusForbidden, resp.Code)
+}
+
 func TestCollectionRoutes_UpdateFolder(t *testing.T) {
 	router, token, wsID := collectionTestDeps(t)
 

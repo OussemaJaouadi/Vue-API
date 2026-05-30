@@ -112,6 +112,43 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		})
 	})
 
+	g.POST("/import", func(c echo.Context) error {
+		var req struct {
+			WorkspaceID string          `json:"workspaceId"`
+			Payload     json.RawMessage `json:"payload"`
+		}
+		if err := c.Bind(&req); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		}
+		if req.WorkspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
+		}
+		if len(req.Payload) == 0 || string(req.Payload) == "null" {
+			return echo.NewHTTPError(http.StatusBadRequest, "payload is required")
+		}
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
+		}
+
+		result, err := collection.ImportWorkbenchExport(c.Request().Context(), deps.Collections, req.WorkspaceID, req.Payload)
+		if errors.Is(err, collection.ErrUnsupportedImportFormat) {
+			return echo.NewHTTPError(http.StatusUnprocessableEntity, "Import format is not supported yet")
+		}
+		if errors.Is(err, collection.ErrInvalidImportPayload) {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid import payload")
+		}
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusCreated, map[string]any{
+			"format":             result.Format,
+			"collectionsCreated": result.CollectionsCreated,
+			"requestsCreated":    result.RequestsCreated,
+			"warnings":           result.Warnings,
+		})
+	})
+
 	g.PUT("/:id", func(c echo.Context) error {
 		var req struct {
 			WorkspaceID string  `json:"workspaceId"`

@@ -19,11 +19,14 @@ const {
   selectCollection,
   toggleCollection,
   exportCollections,
+  importCollections,
   detectJsonImport,
 } = useCollections()
 
 const importInput = ref<HTMLInputElement | null>(null)
 const importOpen = ref(false)
+const importPayload = ref<unknown | null>(null)
+const importing = ref(false)
 const importPreview = ref<{
   fileName: string
   format: string
@@ -38,6 +41,7 @@ const previewImportFile = async (event: Event) => {
 
   const extension = file.name.split('.').pop()?.toLowerCase()
   if (extension === 'yaml' || extension === 'yml') {
+    importPayload.value = null
     importPreview.value = {
       fileName: file.name,
       format: 'YAML spec',
@@ -51,7 +55,9 @@ const previewImportFile = async (event: Event) => {
 
   try {
     const content = await file.text()
-    const detected = detectJsonImport(JSON.parse(content))
+    const parsed = JSON.parse(content)
+    const detected = detectJsonImport(parsed)
+    importPayload.value = detected.status === 'ready' ? parsed : null
     importPreview.value = {
       fileName: file.name,
       ...detected,
@@ -59,6 +65,7 @@ const previewImportFile = async (event: Event) => {
     importOpen.value = true
   }
   catch (error) {
+    importPayload.value = null
     importPreview.value = {
       fileName: file.name,
       format: 'Invalid JSON',
@@ -68,12 +75,34 @@ const previewImportFile = async (event: Event) => {
     }
     importOpen.value = true
   }
+
+  if (importInput.value) {
+    importInput.value.value = ''
+  }
 }
 
-const confirmImport = () => {
-  // Logic to actually import would go here
-  importOpen.value = false
-  importPreview.value = null
+const confirmImport = async () => {
+  if (!importPayload.value || !importPreview.value || importing.value) return
+
+  importing.value = true
+  try {
+    await importCollections(importPayload.value)
+    await workbench.loadCollections()
+    importOpen.value = false
+    importPayload.value = null
+    importPreview.value = null
+  }
+  catch (error: any) {
+    importPreview.value = {
+      ...importPreview.value,
+      status: 'error',
+      summary: error?.data?.error || error?.message || 'Import failed',
+      details: ['The backend rejected this import payload.', 'Nothing was written to the selected workspace.'],
+    }
+  }
+  finally {
+    importing.value = false
+  }
 }
 </script>
 
@@ -176,6 +205,7 @@ const confirmImport = () => {
     <CollectionsImportSheet
       v-model:open="importOpen"
       :preview="importPreview"
+      :importing="importing"
       @import="confirmImport"
     />
   </div>

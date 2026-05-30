@@ -24,6 +24,7 @@ interface ImportPreview {
 
 const props = defineProps<{
   preview: ImportPreview | null
+  importing?: boolean
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
@@ -140,12 +141,12 @@ const statusColor = computed(() => {
         <div class="grid w-full gap-4 sm:grid-cols-2">
           <button
             class="group relative flex h-12 items-center justify-center gap-3 rounded-none border-2 border-primary/20 bg-primary/3 px-4 text-primary transition-all hover:border-primary/50 hover:bg-primary/10 hover:shadow-[4px_4px_0_0_rgba(16,185,129,0.15)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-            :disabled="preview?.status !== 'ready'"
-            :class="preview?.status !== 'ready' && 'opacity-50 cursor-not-allowed'"
+            :disabled="preview?.status !== 'ready' || importing"
+            :class="(preview?.status !== 'ready' || importing) && 'opacity-50 cursor-not-allowed'"
             type="button"
             @click="$emit('import')"
           >
-            <span class="font-mono text-[10px] font-black uppercase tracking-widest">Confirm Ingestion</span>
+            <span class="font-mono text-[10px] font-black uppercase tracking-widest">{{ importing ? 'Importing...' : 'Confirm Ingestion' }}</span>
           </button>
 
           <button

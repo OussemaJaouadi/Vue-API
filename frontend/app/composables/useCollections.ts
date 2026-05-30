@@ -101,6 +101,23 @@ export function useCollections() {
     URL.revokeObjectURL(url)
   }
 
+  const importCollections = async (payload: unknown) => {
+    if (!workspaceId.value) {
+      throw new Error('No workspace selected')
+    }
+
+    const { post } = useApiClient()
+    return await post<{
+      format: string
+      collectionsCreated: number
+      requestsCreated: number
+      warnings: string[]
+    }>('/v1/collections/import', {
+      workspaceId: workspaceId.value,
+      payload,
+    })
+  }
+
   const detectJsonImport = (payload: any) => {
     if (payload?.schema === 'vue-api-workbench.collection.v1') {
       const collections = Array.isArray(payload.collections) ? payload.collections.length : 0
@@ -112,7 +129,7 @@ export function useCollections() {
         format: 'Workbench export',
         status: 'ready' as const,
         summary: `${collections} collections / ${requests} requests`,
-        details: ['Can be imported into local workbench state now.', 'Backend persistence will validate and store this later.'],
+        details: ['Ready for backend persistence.', 'Collections and request order will be stored in the selected workspace.'],
       }
     }
 
@@ -168,6 +185,7 @@ export function useCollections() {
     selectCollection,
     toggleCollection,
     exportCollections,
+    importCollections,
     detectJsonImport,
   }
 }

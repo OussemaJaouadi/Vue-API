@@ -4,6 +4,7 @@
 
 ## New
 
+- Added native Workbench collection import backend endpoint with workspace permission checks, duplicate collection renaming, request persistence, and order preservation.
 - Added workspace deletion with admin/manager authorization and transactional cleanup of grants, memberships, collections, requests, environments, and variables.
 - Added HTTP execution service with configurable timeout, TLS, TTFB tracing, and header/query injection.
 - Added WebSocket execution manager with bidirectional relay and broker event publishing.
@@ -49,6 +50,7 @@
 
 ## New
 
+- Wired the collections import confirmation flow to the backend import endpoint and reloads collections after successful ingestion.
 - Added a dedicated Workspaces page for selecting, renaming, creating, and deleting workspaces; moved destructive workspace control out of the sidebar switcher.
 - Added frontend workspace deletion state handling with API call, local workspace list update, and preferred-workspace fallback.
 - Darkened `--muted-foreground` from oklch(0.552→0.45) in light mode and lightened from oklch(0.765→0.88) in dark mode for WCAG-compliant text contrast.
