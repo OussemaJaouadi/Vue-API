@@ -148,7 +148,7 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
 		}
 
-		result, err := collection.ImportWorkbenchExport(c.Request().Context(), deps.Collections, req.WorkspaceID, req.Payload)
+		result, err := collection.ImportContent(c.Request().Context(), deps.Collections, req.WorkspaceID, req.Payload)
 		if errors.Is(err, collection.ErrUnsupportedImportFormat) {
 			return echo.NewHTTPError(http.StatusUnprocessableEntity, "Import format is not supported yet")
 		}

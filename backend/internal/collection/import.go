@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -58,6 +59,16 @@ type workbenchRequest struct {
 	BodyLanguage string          `json:"bodyLanguage"`
 	AuthConfig   json.RawMessage `json:"authConfig"`
 	SortOrder    int             `json:"sortOrder"`
+}
+
+type openAPIImport struct {
+	OpenAPI string                    `json:"openapi"`
+	Info    openAPIInfo               `json:"info"`
+	Paths   map[string]map[string]any `json:"paths"`
+}
+
+type openAPIInfo struct {
+	Title string `json:"title"`
 }
 
 func ImportWorkbenchExport(ctx context.Context, repo Repository, workspaceID string, payload json.RawMessage) (ImportResult, error) {
@@ -138,6 +149,22 @@ func ImportWorkbenchExport(ctx context.Context, repo Repository, workspaceID str
 	return result, nil
 }
 
+func ImportContent(ctx context.Context, repo Repository, workspaceID string, payload json.RawMessage) (ImportResult, error) {
+	var envelope map[string]any
+	if err := json.Unmarshal(payload, &envelope); err != nil {
+		return ImportResult{}, ErrInvalidImportPayload
+	}
+
+	if envelope["schema"] == WorkbenchExportSchema {
+		return ImportWorkbenchExport(ctx, repo, workspaceID, payload)
+	}
+	if version, ok := envelope["openapi"].(string); ok && version != "" {
+		return importOpenAPI(ctx, repo, workspaceID, payload)
+	}
+
+	return ImportResult{}, ErrUnsupportedImportFormat
+}
+
 func PreviewImportContent(fileName string, content string) ImportPreview {
 	extension := strings.ToLower(filepath.Ext(fileName))
 	if extension == ".yaml" || extension == ".yml" {
@@ -193,11 +220,11 @@ func PreviewImportContent(fileName string, content string) ImportPreview {
 		return ImportPreview{
 			FileName: fileName,
 			Format:   fmt.Sprintf("OpenAPI %s", version),
-			Status:   "unsupported",
+			Status:   "ready",
 			Summary:  fmt.Sprintf("%d paths detected", len(paths)),
 			Details: []string{
 				"Backend detected the spec shape.",
-				"Parser adapter will map operations into folders and requests.",
+				"Operations will be imported into one collection with request rows.",
 			},
 		}
 	}
@@ -299,6 +326,143 @@ func ExportWorkbenchExport(ctx context.Context, repo Repository, workspaceID str
 	output.RootRequests = exportRequests(rootRequests)
 
 	return output, nil
+}
+
+func importOpenAPI(ctx context.Context, repo Repository, workspaceID string, payload json.RawMessage) (ImportResult, error) {
+	if repo == nil {
+		return ImportResult{}, errors.New("collection repository is required")
+	}
+	if strings.TrimSpace(workspaceID) == "" {
+		return ImportResult{}, ErrInvalidImportPayload
+	}
+
+	var input openAPIImport
+	if err := json.Unmarshal(payload, &input); err != nil {
+		return ImportResult{}, ErrInvalidImportPayload
+	}
+	if input.OpenAPI == "" {
+		return ImportResult{}, ErrUnsupportedImportFormat
+	}
+
+	existingNames, err := folderNameSet(ctx, repo, workspaceID)
+	if err != nil {
+		return ImportResult{}, err
+	}
+
+	collectionName := uniqueFolderName(cleanCollectionName(input.Info.Title), existingNames)
+	folder, err := repo.CreateFolder(ctx, CreateFolderParams{
+		WorkspaceID: workspaceID,
+		Name:        collectionName,
+		Icon:        "PhGlobe",
+	})
+	if err != nil {
+		return ImportResult{}, err
+	}
+
+	requests := openAPIRequests(input)
+	requestIDs, created, err := importRequests(ctx, repo, workspaceID, &folder.ID, requests)
+	if err != nil {
+		return ImportResult{}, err
+	}
+	if len(requestIDs) > 0 {
+		if err := repo.ReorderRequests(ctx, workspaceID, []RequestOrderGroup{{
+			CollectionID: &folder.ID,
+			RequestIDs:   requestIDs,
+		}}); err != nil {
+			return ImportResult{}, err
+		}
+	}
+
+	return ImportResult{
+		Format:             fmt.Sprintf("OpenAPI %s", input.OpenAPI),
+		CollectionsCreated: 1,
+		RequestsCreated:    created,
+		Warnings:           []string{},
+	}, nil
+}
+
+func openAPIRequests(input openAPIImport) []workbenchRequest {
+	paths := make([]string, 0, len(input.Paths))
+	for path := range input.Paths {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	requests := make([]workbenchRequest, 0)
+	for _, path := range paths {
+		pathItem := input.Paths[path]
+		for _, method := range []string{"get", "post", "put", "patch", "delete", "options", "head"} {
+			operation := objectValue(pathItem[method])
+			if operation == nil {
+				continue
+			}
+
+			requests = append(requests, workbenchRequest{
+				Method:       strings.ToUpper(method),
+				Name:         openAPIOperationName(method, path, operation),
+				Path:         path,
+				QueryParams:  openAPIQueryParams(operation),
+				Headers:      json.RawMessage("[]"),
+				Body:         openAPIRequestBody(operation),
+				BodyLanguage: "json",
+				AuthConfig:   json.RawMessage("{}"),
+			})
+		}
+	}
+
+	return requests
+}
+
+func openAPIOperationName(method string, path string, operation map[string]any) string {
+	for _, key := range []string{"summary", "operationId"} {
+		if value, ok := operation[key].(string); ok && strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+
+	return fmt.Sprintf("%s %s", strings.ToUpper(method), path)
+}
+
+func openAPIQueryParams(operation map[string]any) json.RawMessage {
+	parameters := arrayValue(operation["parameters"])
+	rows := make([]map[string]any, 0)
+	for _, parameterValue := range parameters {
+		parameter := objectValue(parameterValue)
+		if parameter["in"] != "query" {
+			continue
+		}
+		name, _ := parameter["name"].(string)
+		if strings.TrimSpace(name) == "" {
+			continue
+		}
+		rows = append(rows, map[string]any{
+			"id":      fmt.Sprintf("openapi-query-%s", name),
+			"key":     name,
+			"value":   "",
+			"enabled": false,
+		})
+	}
+
+	return mustJSON(rows, "[]")
+}
+
+func openAPIRequestBody(operation map[string]any) string {
+	requestBody := objectValue(operation["requestBody"])
+	content := objectValue(requestBody["content"])
+	if _, ok := content["application/json"]; ok {
+		return "{}"
+	}
+
+	return ""
+}
+
+func mustJSON(value any, fallback string) json.RawMessage {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return json.RawMessage(fallback)
+	}
+
+	return raw
 }
 
 func folderNameSet(ctx context.Context, repo Repository, workspaceID string) (map[string]bool, error) {

@@ -354,17 +354,78 @@ func TestCollectionRoutes_ImportWorkbenchExport_RenamesDuplicateCollection(t *te
 	assert.Equal(t, "Authentication (import 2)", collections[1].(map[string]any)["name"])
 }
 
-func TestCollectionRoutes_ImportUnsupportedPayload(t *testing.T) {
+func TestCollectionRoutes_ImportUnknownJSONPayload(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import", map[string]any{
+		"workspaceId": wsID,
+		"payload": map[string]any{
+			"not": "a collection format",
+		},
+	}, token)
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+}
+
+func TestCollectionRoutes_ImportOpenAPIJSON(t *testing.T) {
 	router, token, wsID := collectionTestDeps(t)
 
 	resp := performJSON(router, http.MethodPost, "/v1/collections/import", map[string]any{
 		"workspaceId": wsID,
 		"payload": map[string]any{
 			"openapi": "3.1.0",
-			"paths":   map[string]any{},
+			"info": map[string]any{
+				"title": "Sample API",
+			},
+			"paths": map[string]any{
+				"/auth/login": map[string]any{
+					"post": map[string]any{
+						"summary": "Login",
+						"parameters": []any{
+							map[string]any{"name": "include_meta", "in": "query"},
+						},
+						"requestBody": map[string]any{
+							"content": map[string]any{
+								"application/json": map[string]any{},
+							},
+						},
+					},
+				},
+				"/auth/me": map[string]any{
+					"get": map[string]any{
+						"operationId": "currentUser",
+					},
+				},
+			},
 		},
 	}, token)
-	assert.Equal(t, http.StatusUnprocessableEntity, resp.Code)
+	require.Equal(t, http.StatusCreated, resp.Code)
+
+	var importBody map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &importBody))
+	assert.Equal(t, "OpenAPI 3.1.0", importBody["format"])
+	assert.Equal(t, float64(1), importBody["collectionsCreated"])
+	assert.Equal(t, float64(2), importBody["requestsCreated"])
+
+	getResp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId="+wsID, nil, token)
+	require.Equal(t, http.StatusOK, getResp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(getResp.Body.Bytes(), &body))
+	collections := body["collections"].([]any)
+	require.Len(t, collections, 1)
+	imported := collections[0].(map[string]any)
+	assert.Equal(t, "Sample API", imported["name"])
+
+	requests := imported["requests"].([]any)
+	require.Len(t, requests, 2)
+	assert.Equal(t, "POST", requests[0].(map[string]any)["method"])
+	assert.Equal(t, "Login", requests[0].(map[string]any)["name"])
+	assert.Equal(t, "/auth/login", requests[0].(map[string]any)["path"])
+	queryParams := requests[0].(map[string]any)["queryParams"].([]any)
+	require.Len(t, queryParams, 1)
+	assert.Equal(t, "include_meta", queryParams[0].(map[string]any)["key"])
+	assert.Equal(t, "GET", requests[1].(map[string]any)["method"])
+	assert.Equal(t, "currentUser", requests[1].(map[string]any)["name"])
 }
 
 func TestCollectionRoutes_ImportRequiresManageCollectionsPermission(t *testing.T) {
@@ -404,7 +465,7 @@ func TestCollectionRoutes_PreviewWorkbenchImport(t *testing.T) {
 	assert.Equal(t, "1 collections / 3 requests", body["summary"])
 }
 
-func TestCollectionRoutes_PreviewUnsupportedOpenAPIImport(t *testing.T) {
+func TestCollectionRoutes_PreviewOpenAPIImport(t *testing.T) {
 	router, token, wsID := collectionTestDeps(t)
 
 	resp := performJSON(router, http.MethodPost, "/v1/collections/import/preview", map[string]any{
@@ -417,7 +478,7 @@ func TestCollectionRoutes_PreviewUnsupportedOpenAPIImport(t *testing.T) {
 	var body map[string]any
 	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
 	assert.Equal(t, "OpenAPI 3.1.0", body["format"])
-	assert.Equal(t, "unsupported", body["status"])
+	assert.Equal(t, "ready", body["status"])
 	assert.Equal(t, "1 paths detected", body["summary"])
 }
 
