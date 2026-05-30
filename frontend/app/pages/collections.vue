@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { PhFolderOpen, PhPlus, PhWarning } from '@phosphor-icons/vue'
+import { toast } from 'vue-sonner'
 import CollectionsHeader from '~/components/collections/CollectionsHeader.vue'
 import CollectionsRoster from '~/components/collections/CollectionsRoster.vue'
 import CollectionsWorkbench from '~/components/collections/CollectionsWorkbench.vue'
@@ -27,6 +28,7 @@ const importInput = ref<HTMLInputElement | null>(null)
 const importOpen = ref(false)
 const importPayload = ref<unknown | null>(null)
 const importing = ref(false)
+const exporting = ref(false)
 const importPreview = ref<{
   fileName: string
   format: string
@@ -86,19 +88,26 @@ const confirmImport = async () => {
 
   importing.value = true
   try {
-    await importCollections(importPayload.value)
+    const result = await importCollections(importPayload.value)
     await workbench.loadCollections()
     importOpen.value = false
     importPayload.value = null
     importPreview.value = null
+    toast.success('Collection import completed', {
+      description: `${result.collectionsCreated} collections / ${result.requestsCreated} requests ingested`,
+    })
   }
   catch (error: any) {
+    const message = error?.data?.error || error?.message || 'Import failed'
     importPreview.value = {
       ...importPreview.value,
       status: 'error',
-      summary: error?.data?.error || error?.message || 'Import failed',
+      summary: message,
       details: ['The backend rejected this import payload.', 'Nothing was written to the selected workspace.'],
     }
+    toast.error('Collection import failed', {
+      description: message,
+    })
   }
   finally {
     importing.value = false
@@ -106,11 +115,22 @@ const confirmImport = async () => {
 }
 
 const handleExport = async () => {
+  if (exporting.value) return
+
+  exporting.value = true
   try {
     await exportCollections()
+    toast.success('Collection export ready', {
+      description: 'Downloaded the persisted workspace collection payload',
+    })
   }
-  catch (error) {
-    workbench.collectionsError.value = error instanceof Error ? error.message : 'Failed to export collections'
+  catch (error: any) {
+    toast.error('Collection export failed', {
+      description: error?.data?.error || error?.message || 'Failed to export collections',
+    })
+  }
+  finally {
+    exporting.value = false
   }
 }
 </script>
@@ -122,6 +142,7 @@ const handleExport = async () => {
       :request-count="requestCount"
       :collection-names="workbench.treeItems.value.map(group => group.name)"
       :active-collection-name="activeCollectionName"
+      :exporting="exporting"
       @import="importInput?.click()"
       @export="handleExport"
       @add-collection="workbench.addFolder()"

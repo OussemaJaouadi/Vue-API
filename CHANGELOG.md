@@ -51,6 +51,7 @@
 
 ## New
 
+- Added import/export feedback on the collections page with busy export state and success/failure toasts.
 - Wired the collections export action to download the backend export payload instead of serializing stale local state.
 - Wired the collections import confirmation flow to the backend import endpoint and reloads collections after successful ingestion.
 - Added a dedicated Workspaces page for selecting, renaming, creating, and deleting workspaces; moved destructive workspace control out of the sidebar switcher.
