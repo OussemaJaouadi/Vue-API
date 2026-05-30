@@ -178,6 +178,43 @@ func (repo *CollectionRepository) UpdateRequest(ctx context.Context, requestID s
 	return toDomainRequest(model), nil
 }
 
+func (repo *CollectionRepository) ReorderRequests(ctx context.Context, workspaceID string, groups []collection.RequestOrderGroup) error {
+	return repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, group := range groups {
+			if group.CollectionID != nil {
+				var count int64
+				if err := tx.Model(&FolderModel{}).
+					Where("id = ? AND workspace_id = ?", *group.CollectionID, workspaceID).
+					Count(&count).Error; err != nil {
+					return err
+				}
+				if count == 0 {
+					return collection.ErrFolderNotFound
+				}
+			}
+
+			for index, requestID := range group.RequestIDs {
+				updates := map[string]any{
+					"collection_id": group.CollectionID,
+					"sort_order":    index,
+				}
+
+				result := tx.Model(&RequestModel{}).
+					Where("id = ? AND workspace_id = ?", requestID, workspaceID).
+					Updates(updates)
+				if result.Error != nil {
+					return result.Error
+				}
+				if result.RowsAffected == 0 {
+					return collection.ErrRequestNotFound
+				}
+			}
+		}
+
+		return nil
+	})
+}
+
 func (repo *CollectionRepository) DeleteFolder(ctx context.Context, folderID string) error {
 	result := repo.db.WithContext(ctx).Where("id = ?", folderID).Delete(&FolderModel{})
 	if result.Error != nil {

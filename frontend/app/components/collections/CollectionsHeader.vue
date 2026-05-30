@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import {
+  PhCaretDown,
+  PhCheck,
   PhDownloadSimple,
   PhFolderOpen,
   PhPlus,
@@ -9,12 +11,15 @@ import {
 defineProps<{
   groupCount: number
   requestCount: number
+  collectionNames: string[]
+  activeCollectionName: string
 }>()
 
 defineEmits<{
   import: []
   export: []
   addCollection: []
+  selectCollection: [name: string]
 }>()
 </script>
 
@@ -33,6 +38,38 @@ defineEmits<{
     </div>
 
     <div class="flex items-center gap-3">
+      <UiDropdownMenu>
+        <UiDropdownMenuTrigger as-child>
+          <button class="flex h-9 min-w-40 items-center justify-between gap-3 border-2 border-primary/15 bg-background px-3 font-mono text-[10px] font-black uppercase tracking-widest text-primary transition-all hover:border-primary/50 hover:bg-primary/5">
+            <span class="truncate">{{ activeCollectionName === 'all' ? 'All collections' : activeCollectionName }}</span>
+            <PhCaretDown class="size-3 opacity-70" />
+          </button>
+        </UiDropdownMenuTrigger>
+        <UiDropdownMenuContent align="end" class="w-64 rounded-none border-2 p-1">
+          <UiDropdownMenuLabel class="p-2 text-[9px] font-black uppercase tracking-[0.2em] text-primary/80">
+            Active Collection
+          </UiDropdownMenuLabel>
+          <UiDropdownMenuItem
+            class="grid grid-cols-[minmax(0,1fr)_14px] items-center gap-2 rounded-none px-2 py-2.5 font-mono text-[10px] font-black uppercase tracking-widest"
+            :class="activeCollectionName === 'all' ? 'bg-primary/8 text-primary' : 'text-muted-foreground'"
+            @select="$emit('selectCollection', 'all')"
+          >
+            <span class="truncate">All collections</span>
+            <PhCheck v-if="activeCollectionName === 'all'" class="size-3 text-primary" />
+          </UiDropdownMenuItem>
+          <UiDropdownMenuItem
+            v-for="name in collectionNames"
+            :key="name"
+            class="grid grid-cols-[minmax(0,1fr)_14px] items-center gap-2 rounded-none px-2 py-2.5 font-mono text-[10px] font-black uppercase tracking-widest"
+            :class="name === activeCollectionName ? 'bg-primary/8 text-primary' : 'text-muted-foreground'"
+            @select="$emit('selectCollection', name)"
+          >
+            <span class="truncate">{{ name }}</span>
+            <PhCheck v-if="name === activeCollectionName" class="size-3 text-primary" />
+          </UiDropdownMenuItem>
+        </UiDropdownMenuContent>
+      </UiDropdownMenu>
+
       <div class="flex items-center gap-2">
         <button
           class="btn-tactile-muted flex h-9 items-center gap-2 px-3 font-mono text-[10px] font-black uppercase tracking-widest outline-none"

@@ -50,10 +50,11 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 			}
 
 			result = append(result, map[string]any{
-				"id":       folder.ID,
-				"name":     folder.Name,
-				"icon":     folder.Icon,
-				"requests": requestList,
+				"id":        folder.ID,
+				"name":      folder.Name,
+				"icon":      folder.Icon,
+				"sortOrder": folder.SortOrder,
+				"requests":  requestList,
 			})
 		}
 
@@ -214,6 +215,45 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		return c.JSON(http.StatusCreated, requestResponse(request))
 	})
 
+	g.PUT("/requests/order", func(c echo.Context) error {
+		var req struct {
+			WorkspaceID string `json:"workspaceId"`
+			Groups      []struct {
+				CollectionID *string  `json:"collectionId"`
+				RequestIDs   []string `json:"requestIds"`
+			} `json:"groups"`
+		}
+		if err := c.Bind(&req); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		}
+		if req.WorkspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
+		}
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
+		}
+
+		groups := make([]collection.RequestOrderGroup, 0, len(req.Groups))
+		for _, group := range req.Groups {
+			groups = append(groups, collection.RequestOrderGroup{
+				CollectionID: group.CollectionID,
+				RequestIDs:   group.RequestIDs,
+			})
+		}
+
+		if err := deps.Collections.ReorderRequests(c.Request().Context(), req.WorkspaceID, groups); err != nil {
+			if errors.Is(err, collection.ErrRequestNotFound) {
+				return echo.NewHTTPError(http.StatusNotFound, "Request not found")
+			}
+			if errors.Is(err, collection.ErrFolderNotFound) {
+				return echo.NewHTTPError(http.StatusNotFound, "Collection not found")
+			}
+			return err
+		}
+
+		return c.NoContent(http.StatusNoContent)
+	})
+
 	g.PUT("/requests/:id", func(c echo.Context) error {
 		var req struct {
 			WorkspaceID  string           `json:"workspaceId"`
@@ -298,6 +338,7 @@ func requestResponse(req collection.Request) map[string]any {
 		"method":       req.Method,
 		"name":         req.Name,
 		"path":         req.Path,
+		"sortOrder":    req.SortOrder,
 		"queryParams":  decodeJSONOrDefault(req.QueryParamsJSON, []any{}),
 		"headers":      decodeJSONOrDefault(req.HeadersJSON, []any{}),
 		"body":         req.Body,

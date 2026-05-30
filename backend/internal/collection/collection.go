@@ -68,6 +68,11 @@ type UpdateRequestParams struct {
 	AuthConfigJSON  *string
 }
 
+type RequestOrderGroup struct {
+	CollectionID *string
+	RequestIDs   []string
+}
+
 type FolderWithRequests struct {
 	Folder   Folder
 	Requests []Request
@@ -87,6 +92,7 @@ type Repository interface {
 	CreateRequest(ctx context.Context, params CreateRequestParams) (Request, error)
 	UpdateFolder(ctx context.Context, id string, params UpdateFolderParams) (Folder, error)
 	UpdateRequest(ctx context.Context, id string, params UpdateRequestParams) (Request, error)
+	ReorderRequests(ctx context.Context, workspaceID string, groups []RequestOrderGroup) error
 	DeleteFolder(ctx context.Context, id string) error
 	DeleteRequest(ctx context.Context, id string) error
 }

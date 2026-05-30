@@ -15,6 +15,7 @@ export interface RequestItem {
   body?: string
   bodyLanguage?: BodyLanguage
   authConfig?: RequestAuthConfig
+  sortOrder?: number
   active?: boolean
 }
 
@@ -23,6 +24,7 @@ export interface TreeItem {
   name: string
   icon: WorkbenchIconKey
   requests: RequestItem[]
+  sortOrder?: number
 }
 
 export interface QueryParamItem {
@@ -170,6 +172,7 @@ const requestFromApi = (r: any): RequestItem => ({
   headers: cloneRows(r.headers),
   body: r.body || '',
   bodyLanguage: r.bodyLanguage || 'json',
+  sortOrder: r.sortOrder,
   authConfig: {
     ...defaultRequestAuthConfig(),
     ...(r.authConfig || {}),
@@ -266,6 +269,7 @@ export function useWorkbench() {
         id: c.id,
         name: c.name,
         icon: c.icon || 'PhGlobe',
+        sortOrder: c.sortOrder,
         requests: c.requests.map(requestFromApi),
       }))
       rootRequests.value = (data.rootRequests || []).map(requestFromApi)
@@ -427,12 +431,6 @@ export function useWorkbench() {
   }
 
   const addRequest = async (folderName?: string) => {
-    const newReq: RequestItem = {
-      id: crypto.randomUUID(),
-      method: 'GET',
-      name: 'New Request',
-      path: '/path',
-    }
     try {
       const { post } = useApiClient()
       const folderId = folderName ? treeItems.value.find(f => f.name === folderName)?.id : undefined
@@ -449,18 +447,45 @@ export function useWorkbench() {
         bodyLanguage: 'json',
         authConfig: defaultRequestAuthConfig(),
       })
-      Object.assign(newReq, requestFromApi(created))
+      const newReq = requestFromApi(created)
+
+      if (folderName) {
+        const folder = treeItems.value.find(f => f.name === folderName)
+        if (folder) folder.requests.push(newReq)
+      } else {
+        rootRequests.value.push(newReq)
+      }
+      persistRequestOrder()
+      openRequest(newReq)
     } catch (err) {
       console.error('Failed to create request', err)
     }
+  }
 
-    if (folderName) {
-      const folder = treeItems.value.find(f => f.name === folderName)
-      if (folder) folder.requests.push(newReq)
-    } else {
-      rootRequests.value.push(newReq)
+  const requestOrderPayload = () => ({
+    workspaceId: workspaceId.value,
+    groups: [
+      {
+        collectionId: null,
+        requestIds: rootRequests.value.map(request => request.id),
+      },
+      ...treeItems.value.map(group => ({
+        collectionId: group.id || null,
+        requestIds: group.requests.map(request => request.id),
+      })),
+    ],
+  })
+
+  const persistRequestOrder = async () => {
+    if (!workspaceId.value) return
+
+    try {
+      const { put } = useApiClient()
+      await put('/v1/collections/requests/order', requestOrderPayload())
+    } catch (err) {
+      console.error('Failed to persist request order', err)
+      await loadCollections()
     }
-    openRequest(newReq)
   }
 
   const moveRequest = (requestId: string, targetFolderName?: string, targetIndex?: number) => {
@@ -501,6 +526,8 @@ export function useWorkbench() {
       const insertIndex = targetIndex !== undefined ? adjustSameContainerIndex(targetIndex) : rootRequests.value.length
       rootRequests.value.splice(insertIndex, 0, requestToMove)
     }
+
+    persistRequestOrder()
   }
 
   const deleteItem = async (identifier: string, isFolder: boolean) => {

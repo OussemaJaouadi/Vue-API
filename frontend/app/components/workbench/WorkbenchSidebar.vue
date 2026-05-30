@@ -11,22 +11,32 @@ import {
   PhFolderPlus,
   PhArrowElbowDownRight,
 } from '@phosphor-icons/vue'
+import { useStorage } from '@vueuse/core'
 import { type ApiMethod, METHOD_COLORS, WORKBENCH_ICONS } from '~/composables/useWorkbench'
 
 const workbench = useWorkbench()
+const workspaceId = useState<string>('workspace:id', () => '')
 
 // Expanded state for folders
-const expandedFolders = useState<Record<string, boolean>>('workbench:sidebar-expanded', () => ({
-  'Authentication': true,
-  'Realtime': true
-}))
+const expandedFoldersByWorkspace = useStorage<Record<string, Record<string, boolean>>>('workbench:sidebar-expanded-by-workspace', {})
+const defaultExpandedFolders: Record<string, boolean> = { Authentication: true, Realtime: true }
+const expandedFolders = computed<Record<string, boolean>>(
+  () => expandedFoldersByWorkspace.value[workspaceId.value || 'global'] || defaultExpandedFolders,
+)
 
 // Drag state for position indicators
 const dragOverTarget = ref<string | null>(null)
 const dragOverPosition = ref<'before' | 'after' | 'inside' | null>(null)
 
 const toggleFolder = (name: string) => {
-  expandedFolders.value[name] = !expandedFolders.value[name]
+  const key = workspaceId.value || 'global'
+  expandedFoldersByWorkspace.value = {
+    ...expandedFoldersByWorkspace.value,
+    [key]: {
+      ...expandedFolders.value,
+      [name]: !expandedFolders.value[name],
+    },
+  }
 }
 
 const methodAbreviations: Record<ApiMethod, string> = {
@@ -202,10 +212,10 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
 
       <!-- Root Requests -->
       <div class="space-y-0.5 mb-2">
-        <div v-if="dragOverTarget === `root-0` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
+        <div v-if="dragOverTarget === `root-0` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_var(--color-primary)]" />
         
         <template v-for="(request, index) in workbench.rootRequests.value" :key="request.id">
-          <div v-if="index > 0 && dragOverTarget === `root-${index}` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
+          <div v-if="index > 0 && dragOverTarget === `root-${index}` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_var(--color-primary)]" />
           
           <button
             draggable="true"
@@ -243,7 +253,7 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
           </button>
         </template>
         
-        <div v-if="dragOverTarget === `root-${workbench.rootRequests.value.length - 1}` && dragOverPosition === 'after'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
+        <div v-if="dragOverTarget === `root-${workbench.rootRequests.value.length - 1}` && dragOverPosition === 'after'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_var(--color-primary)]" />
       </div>
 
       <!-- Folders & Nested -->
@@ -290,10 +300,10 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
 
         <!-- Nested Items -->
         <div v-if="expandedFolders[group.name]" class="ml-4 border-l-2 border-primary/5 pl-1 mt-0.5 space-y-0.5">
-          <div v-if="dragOverTarget === `folder-${group.name}-0` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
+          <div v-if="dragOverTarget === `folder-${group.name}-0` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_var(--color-primary)]" />
           
           <template v-for="(request, index) in group.requests" :key="request.id">
-            <div v-if="index > 0 && dragOverTarget === `folder-${group.name}-${index}` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
+            <div v-if="index > 0 && dragOverTarget === `folder-${group.name}-${index}` && dragOverPosition === 'before'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_var(--color-primary)]" />
             
             <button
               draggable="true"
@@ -304,7 +314,7 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
               @dragleave="handleDragLeave"
               @drop.stop="handleDrop($event, group.name, index, dragOverPosition)"
               class="group relative flex h-9 w-full items-center gap-2.5 px-3 transition-all duration-200 outline-none"
-              :class="request.id === workbench.activeRequestId.value ? 'bg-primary/10 text-foreground' : 'text-muted-foreground hover:bg-primary/[0.02] hover:text-foreground'"
+              :class="request.id === workbench.activeRequestId.value ? 'bg-primary/10 text-foreground' : 'text-muted-foreground hover:bg-primary/2 hover:text-foreground'"
             >
               <div v-if="request.id === workbench.activeRequestId.value" class="wb-active-indicator" />
               
@@ -331,7 +341,7 @@ const handleDrop = (e: DragEvent, targetFolderName?: string, targetIndex?: numbe
             </button>
           </template>
           
-          <div v-if="dragOverTarget === `folder-${group.name}-${group.requests.length - 1}` && dragOverPosition === 'after'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_theme(colors.primary.DEFAULT)]" />
+          <div v-if="dragOverTarget === `folder-${group.name}-${group.requests.length - 1}` && dragOverPosition === 'after'" class="h-0.75 mx-2 bg-primary/60 shadow-[0_0_8px_var(--color-primary)]" />
         </div>
       </div>
     </nav>

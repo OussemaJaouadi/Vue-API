@@ -10,6 +10,7 @@ import {
   PhCheck,
   PhGearSix,
   PhPlus,
+  PhFolderOpen,
 } from '@phosphor-icons/vue'
 import { useMagicKeys } from '@vueuse/core'
 
@@ -26,6 +27,8 @@ const now = ref(new Date())
 const createWorkspaceOpen = ref(false)
 let clockTimer: ReturnType<typeof setInterval> | undefined
 const { workspaces, currentWorkspaceId, currentWorkspace, workspacesLoading } = useWorkspace()
+const workbench = useWorkbench()
+const { activeCollectionName, activeRequestCount, selectCollection } = useCollections()
 
 const currentTime = computed(() => new Intl.DateTimeFormat(undefined, {
   hour: '2-digit',
@@ -51,6 +54,7 @@ onMounted(() => {
 
 const shortcutHint = computed(() => isMac.value ? '⌘ K' : 'CTRL K')
 const displayWorkspaceName = computed(() => currentWorkspace.value?.name ?? props.workspaceName)
+const displayCollectionName = computed(() => activeCollectionName.value === 'all' ? props.projectName : activeCollectionName.value)
 
 const { meta_k, ctrl_k } = useMagicKeys({
   passive: false,
@@ -146,13 +150,35 @@ onBeforeUnmount(() => {
           <UiDropdownMenuTrigger as-child>
             <button class="group flex items-center gap-1.5 border border-transparent px-2 py-1 transition-all hover:border-primary/20 hover:bg-primary/5 active:bg-primary/10">
               <PhCube class="size-2.5 text-primary group-hover:scale-110 transition-transform" />
-              <span class="truncate text-primary">{{ projectName }}</span>
+              <span class="truncate text-primary">{{ displayCollectionName }}</span>
               <PhCaretDown class="size-2 opacity-50 group-hover:opacity-100 text-primary" />
             </button>
           </UiDropdownMenuTrigger>
           <UiDropdownMenuContent align="start" class="w-56 rounded-none border-2 p-1">
-             <UiDropdownMenuLabel class="text-[9px] font-black uppercase tracking-[0.2em] text-primary/80 p-2">Switch Project</UiDropdownMenuLabel>
-             <UiDropdownMenuItem class="rounded-none font-bold uppercase text-[10px]">{{ projectName }}</UiDropdownMenuItem>
+             <UiDropdownMenuLabel class="text-[9px] font-black uppercase tracking-[0.2em] text-primary/80 p-2">Switch Collection</UiDropdownMenuLabel>
+             <UiDropdownMenuItem
+               class="grid grid-cols-[14px_minmax(0,1fr)_14px] items-center gap-2 rounded-none px-2 py-2.5 font-mono text-[10px] font-black uppercase tracking-widest"
+               :class="activeCollectionName === 'all' ? 'bg-primary/8 text-primary' : 'text-muted-foreground'"
+               @select="selectCollection('all')"
+             >
+               <PhCube class="size-3" />
+               <span class="truncate">All collections</span>
+               <PhCheck v-if="activeCollectionName === 'all'" class="size-3 text-primary" />
+             </UiDropdownMenuItem>
+             <UiDropdownMenuItem
+               v-for="collection in workbench.treeItems.value"
+               :key="collection.id || collection.name"
+               class="grid grid-cols-[14px_minmax(0,1fr)_14px] items-center gap-2 rounded-none px-2 py-2.5 font-mono text-[10px] font-black uppercase tracking-widest"
+               :class="collection.name === activeCollectionName ? 'bg-primary/8 text-primary' : 'text-muted-foreground'"
+               @select="selectCollection(collection.name)"
+             >
+               <PhFolderOpen class="size-3" />
+               <span class="truncate">{{ collection.name }}</span>
+               <PhCheck v-if="collection.name === activeCollectionName" class="size-3 text-primary" />
+             </UiDropdownMenuItem>
+             <div class="border-t border-border/40 px-2 py-2 font-mono text-[9px] font-bold uppercase tracking-widest text-muted-foreground/70">
+               {{ activeRequestCount }} requests visible
+             </div>
           </UiDropdownMenuContent>
         </UiDropdownMenu>
       </nav>

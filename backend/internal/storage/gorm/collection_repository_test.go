@@ -395,6 +395,56 @@ func TestCreateRequest_DefaultSortOrder(t *testing.T) {
 	assert.Equal(t, 0, req.SortOrder)
 }
 
+func TestReorderRequests_MovesRequestBetweenRootAndFolder(t *testing.T) {
+	_, repo := newCollectionRepo(t)
+
+	folder, _ := repo.CreateFolder(context.Background(), collection.CreateFolderParams{
+		WorkspaceID: "ws1", Name: "Auth",
+	})
+	first, _ := repo.CreateRequest(context.Background(), collection.CreateRequestParams{
+		WorkspaceID: "ws1", Method: "GET", Name: "First", Path: "/first",
+	})
+	second, _ := repo.CreateRequest(context.Background(), collection.CreateRequestParams{
+		WorkspaceID: "ws1", Method: "GET", Name: "Second", Path: "/second",
+	})
+
+	err := repo.ReorderRequests(context.Background(), "ws1", []collection.RequestOrderGroup{
+		{CollectionID: nil, RequestIDs: []string{second.ID}},
+		{CollectionID: &folder.ID, RequestIDs: []string{first.ID}},
+	})
+
+	require.NoError(t, err)
+
+	rootRequests, err := repo.ListRootRequests(context.Background(), "ws1")
+	require.NoError(t, err)
+	require.Len(t, rootRequests, 1)
+	assert.Equal(t, second.ID, rootRequests[0].ID)
+	assert.Equal(t, 0, rootRequests[0].SortOrder)
+
+	folderRequests, err := repo.ListRequests(context.Background(), "ws1", &folder.ID)
+	require.NoError(t, err)
+	require.Len(t, folderRequests, 1)
+	assert.Equal(t, first.ID, folderRequests[0].ID)
+	assert.Equal(t, 0, folderRequests[0].SortOrder)
+}
+
+func TestReorderRequests_RejectsCollectionFromAnotherWorkspace(t *testing.T) {
+	_, repo := newCollectionRepo(t)
+
+	folder, _ := repo.CreateFolder(context.Background(), collection.CreateFolderParams{
+		WorkspaceID: "ws2", Name: "Other",
+	})
+	req, _ := repo.CreateRequest(context.Background(), collection.CreateRequestParams{
+		WorkspaceID: "ws1", Method: "GET", Name: "First", Path: "/first",
+	})
+
+	err := repo.ReorderRequests(context.Background(), "ws1", []collection.RequestOrderGroup{
+		{CollectionID: &folder.ID, RequestIDs: []string{req.ID}},
+	})
+
+	require.ErrorIs(t, err, collection.ErrFolderNotFound)
+}
+
 func TestCreateFolder_DefaultSortOrder(t *testing.T) {
 	_, repo := newCollectionRepo(t)
 

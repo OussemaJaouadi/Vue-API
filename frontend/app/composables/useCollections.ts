@@ -1,12 +1,22 @@
+import { useStorage } from '@vueuse/core'
+
 export function useCollections() {
   const workbench = useWorkbench()
   const { environments } = useEnvironments()
+  const workspaceId = useState<string>('workspace:id', () => '')
 
   const requestCount = computed(() => workbench.treeItems.value.reduce((count, group) => count + group.requests.length, workbench.rootRequests.value.length))
   const activeCollectionName = useState<string>('collections:active-collection', () => 'all')
-  const expandedCollections = useState<Record<string, boolean>>('collections:expanded', () => ({
-    all: true,
-  }))
+  const expandedCollections = useStorage<Record<string, Record<string, boolean>>>('collections:expanded-by-workspace', {})
+  const workspaceExpandedCollections = computed({
+    get: () => expandedCollections.value[workspaceId.value || 'global'] || { all: true },
+    set: (value) => {
+      expandedCollections.value = {
+        ...expandedCollections.value,
+        [workspaceId.value || 'global']: value,
+      }
+    },
+  })
 
   const environmentPolicyFor = (name: string) => {
     const envs = environments.value
@@ -46,6 +56,13 @@ export function useCollections() {
     return workbench.treeItems.value.find(group => group.name === activeCollectionName.value) ?? null
   })
 
+  watch([workspaceId, () => workbench.treeItems.value.map(group => group.name).join('|')], () => {
+    if (activeCollectionName.value === 'all') return
+    if (!workbench.treeItems.value.some(group => group.name === activeCollectionName.value)) {
+      activeCollectionName.value = 'all'
+    }
+  })
+
   const displayedCollections = computed(() => {
     if (activeCollection.value) return [activeCollection.value]
     return workbench.treeItems.value
@@ -58,11 +75,17 @@ export function useCollections() {
 
   const selectCollection = (name: string) => {
     activeCollectionName.value = name
-    expandedCollections.value[name] = true
+    workspaceExpandedCollections.value = {
+      ...workspaceExpandedCollections.value,
+      [name]: true,
+    }
   }
 
   const toggleCollection = (name: string) => {
-    expandedCollections.value[name] = !expandedCollections.value[name]
+    workspaceExpandedCollections.value = {
+      ...workspaceExpandedCollections.value,
+      [name]: !workspaceExpandedCollections.value[name],
+    }
   }
 
   const exportCollections = () => {
@@ -137,7 +160,7 @@ export function useCollections() {
   return {
     requestCount,
     activeCollectionName,
-    expandedCollections,
+    expandedCollections: workspaceExpandedCollections,
     activeCollection,
     displayedCollections,
     activeRequestCount,

@@ -82,9 +82,12 @@ const confirmImport = () => {
     <CollectionsHeader
       :group-count="workbench.treeItems.value.length"
       :request-count="requestCount"
+      :collection-names="workbench.treeItems.value.map(group => group.name)"
+      :active-collection-name="activeCollectionName"
       @import="importInput?.click()"
       @export="exportCollections"
       @add-collection="workbench.addFolder()"
+      @select-collection="selectCollection"
     />
 
     <input
