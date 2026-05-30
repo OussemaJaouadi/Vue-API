@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 const WorkbenchExportSchema = "vue-api-workbench.collection.v1"
@@ -24,17 +25,21 @@ type ImportResult struct {
 
 type workbenchExport struct {
 	Schema       string                `json:"schema"`
+	ExportedAt   string                `json:"exportedAt,omitempty"`
 	Collections  []workbenchCollection `json:"collections"`
 	RootRequests []workbenchRequest    `json:"rootRequests"`
 }
 
 type workbenchCollection struct {
-	Name     string             `json:"name"`
-	Icon     string             `json:"icon"`
-	Requests []workbenchRequest `json:"requests"`
+	ID        string             `json:"id,omitempty"`
+	Name      string             `json:"name"`
+	Icon      string             `json:"icon"`
+	SortOrder int                `json:"sortOrder"`
+	Requests  []workbenchRequest `json:"requests"`
 }
 
 type workbenchRequest struct {
+	ID           string          `json:"id,omitempty"`
 	Method       string          `json:"method"`
 	Name         string          `json:"name"`
 	Path         string          `json:"path"`
@@ -43,6 +48,7 @@ type workbenchRequest struct {
 	Body         string          `json:"body"`
 	BodyLanguage string          `json:"bodyLanguage"`
 	AuthConfig   json.RawMessage `json:"authConfig"`
+	SortOrder    int             `json:"sortOrder"`
 }
 
 func ImportWorkbenchExport(ctx context.Context, repo Repository, workspaceID string, payload json.RawMessage) (ImportResult, error) {
@@ -123,6 +129,50 @@ func ImportWorkbenchExport(ctx context.Context, repo Repository, workspaceID str
 	return result, nil
 }
 
+func ExportWorkbenchExport(ctx context.Context, repo Repository, workspaceID string, exportedAt time.Time) (workbenchExport, error) {
+	if repo == nil {
+		return workbenchExport{}, errors.New("collection repository is required")
+	}
+	if strings.TrimSpace(workspaceID) == "" {
+		return workbenchExport{}, ErrInvalidImportPayload
+	}
+
+	folders, err := repo.ListFolders(ctx, workspaceID)
+	if err != nil {
+		return workbenchExport{}, err
+	}
+
+	output := workbenchExport{
+		Schema:       WorkbenchExportSchema,
+		ExportedAt:   exportedAt.UTC().Format(time.RFC3339),
+		Collections:  make([]workbenchCollection, 0, len(folders)),
+		RootRequests: []workbenchRequest{},
+	}
+
+	for _, folder := range folders {
+		requests, err := repo.ListRequests(ctx, workspaceID, &folder.ID)
+		if err != nil {
+			return workbenchExport{}, err
+		}
+
+		output.Collections = append(output.Collections, workbenchCollection{
+			ID:        folder.ID,
+			Name:      folder.Name,
+			Icon:      folder.Icon,
+			SortOrder: folder.SortOrder,
+			Requests:  exportRequests(requests),
+		})
+	}
+
+	rootRequests, err := repo.ListRootRequests(ctx, workspaceID)
+	if err != nil {
+		return workbenchExport{}, err
+	}
+	output.RootRequests = exportRequests(rootRequests)
+
+	return output, nil
+}
+
 func folderNameSet(ctx context.Context, repo Repository, workspaceID string) (map[string]bool, error) {
 	folders, err := repo.ListFolders(ctx, workspaceID)
 	if err != nil {
@@ -159,6 +209,26 @@ func importRequests(ctx context.Context, repo Repository, workspaceID string, co
 	}
 
 	return requestIDs, len(requestIDs), nil
+}
+
+func exportRequests(requests []Request) []workbenchRequest {
+	output := make([]workbenchRequest, 0, len(requests))
+	for _, request := range requests {
+		output = append(output, workbenchRequest{
+			ID:           request.ID,
+			Method:       request.Method,
+			Name:         request.Name,
+			Path:         request.Path,
+			QueryParams:  json.RawMessage(rawOrDefault(json.RawMessage(request.QueryParamsJSON), "[]")),
+			Headers:      json.RawMessage(rawOrDefault(json.RawMessage(request.HeadersJSON), "[]")),
+			Body:         request.Body,
+			BodyLanguage: stringOrDefault(request.BodyLanguage, "json"),
+			AuthConfig:   json.RawMessage(rawOrDefault(json.RawMessage(request.AuthConfigJSON), "{}")),
+			SortOrder:    request.SortOrder,
+		})
+	}
+
+	return output
 }
 
 func cleanCollectionName(name string) string {

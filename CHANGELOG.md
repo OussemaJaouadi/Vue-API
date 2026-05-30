@@ -4,6 +4,7 @@
 
 ## New
 
+- Added native Workbench collection export backend endpoint with workspace permission checks and persisted request payload serialization.
 - Added native Workbench collection import backend endpoint with workspace permission checks, duplicate collection renaming, request persistence, and order preservation.
 - Added workspace deletion with admin/manager authorization and transactional cleanup of grants, memberships, collections, requests, environments, and variables.
 - Added HTTP execution service with configurable timeout, TLS, TTFB tracing, and header/query injection.
@@ -50,6 +51,7 @@
 
 ## New
 
+- Wired the collections export action to download the backend export payload instead of serializing stale local state.
 - Wired the collections import confirmation flow to the backend import endpoint and reloads collections after successful ingestion.
 - Added a dedicated Workspaces page for selecting, renaming, creating, and deleting workspaces; moved destructive workspace control out of the sidebar switcher.
 - Added frontend workspace deletion state handling with API call, local workspace list update, and preferred-workspace fallback.

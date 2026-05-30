@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -72,6 +73,23 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 			"collections":  result,
 			"rootRequests": rootRequestList,
 		})
+	})
+
+	g.GET("/export", func(c echo.Context) error {
+		workspaceID := c.QueryParam("workspaceId")
+		if workspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId query parameter is required")
+		}
+		if !hasWorkspacePermission(c, deps.Memberships, workspaceID, auth.PermissionViewCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized for this workspace")
+		}
+
+		result, err := collection.ExportWorkbenchExport(c.Request().Context(), deps.Collections, workspaceID, time.Now())
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusOK, result)
 	})
 
 	g.POST("", func(c echo.Context) error {

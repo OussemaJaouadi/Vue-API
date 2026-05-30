@@ -380,6 +380,79 @@ func TestCollectionRoutes_ImportRequiresManageCollectionsPermission(t *testing.T
 	assert.Equal(t, http.StatusForbidden, resp.Code)
 }
 
+func TestCollectionRoutes_ExportWorkbenchData(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	folderResp := performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
+		"workspaceId": wsID,
+		"name":        "Authentication",
+		"icon":        "PhKey",
+	}, token)
+	require.Equal(t, http.StatusCreated, folderResp.Code)
+
+	var folderBody map[string]any
+	require.NoError(t, json.Unmarshal(folderResp.Body.Bytes(), &folderBody))
+	folderID := folderBody["id"].(string)
+
+	requestResp := performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]any{
+		"workspaceId":  wsID,
+		"collectionId": folderID,
+		"method":       "POST",
+		"name":         "Login",
+		"path":         "/auth/login",
+		"queryParams":  []any{map[string]any{"id": "q1", "key": "include_meta", "value": "true", "enabled": true}},
+		"headers":      []any{map[string]any{"id": "h1", "key": "Content-Type", "value": "application/json", "enabled": true}},
+		"body":         `{"login":"owner@example.com"}`,
+		"bodyLanguage": "json",
+		"authConfig":   map[string]any{"mode": "bearer", "bearerToken": "{{accessToken}}"},
+	}, token)
+	require.Equal(t, http.StatusCreated, requestResp.Code)
+
+	rootResp := performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]any{
+		"workspaceId": wsID,
+		"method":      "GET",
+		"name":        "Health",
+		"path":        "/healthz",
+	}, token)
+	require.Equal(t, http.StatusCreated, rootResp.Code)
+
+	resp := performJSON(router, http.MethodGet, "/v1/collections/export?workspaceId="+wsID, nil, token)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.Equal(t, "vue-api-workbench.collection.v1", body["schema"])
+	assert.NotEmpty(t, body["exportedAt"])
+
+	collections := body["collections"].([]any)
+	require.Len(t, collections, 1)
+	exportedCollection := collections[0].(map[string]any)
+	assert.Equal(t, "Authentication", exportedCollection["name"])
+	assert.Equal(t, "PhKey", exportedCollection["icon"])
+
+	requests := exportedCollection["requests"].([]any)
+	require.Len(t, requests, 1)
+	exportedRequest := requests[0].(map[string]any)
+	assert.Equal(t, "POST", exportedRequest["method"])
+	assert.Equal(t, "Login", exportedRequest["name"])
+	assert.Equal(t, "/auth/login", exportedRequest["path"])
+	assert.Equal(t, `{"login":"owner@example.com"}`, exportedRequest["body"])
+	assert.Equal(t, "json", exportedRequest["bodyLanguage"])
+	assert.Equal(t, "bearer", exportedRequest["authConfig"].(map[string]any)["mode"])
+
+	rootRequests := body["rootRequests"].([]any)
+	require.Len(t, rootRequests, 1)
+	assert.Equal(t, "Health", rootRequests[0].(map[string]any)["name"])
+}
+
+func TestCollectionRoutes_ExportRequiresWorkspaceMembership(t *testing.T) {
+	router, _, wsID := collectionTestDeps(t)
+	otherToken := registerCollectionRouteUser(t, router, "export-other@example.com", "exportother")
+
+	resp := performJSON(router, http.MethodGet, "/v1/collections/export?workspaceId="+wsID, nil, otherToken)
+	assert.Equal(t, http.StatusForbidden, resp.Code)
+}
+
 func TestCollectionRoutes_UpdateFolder(t *testing.T) {
 	router, token, wsID := collectionTestDeps(t)
 

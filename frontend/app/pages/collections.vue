@@ -104,6 +104,15 @@ const confirmImport = async () => {
     importing.value = false
   }
 }
+
+const handleExport = async () => {
+  try {
+    await exportCollections()
+  }
+  catch (error) {
+    workbench.collectionsError.value = error instanceof Error ? error.message : 'Failed to export collections'
+  }
+}
 </script>
 
 <template>
@@ -114,7 +123,7 @@ const confirmImport = async () => {
       :collection-names="workbench.treeItems.value.map(group => group.name)"
       :active-collection-name="activeCollectionName"
       @import="importInput?.click()"
-      @export="exportCollections"
+      @export="handleExport"
       @add-collection="workbench.addFolder()"
       @select-collection="selectCollection"
     />

@@ -30,27 +30,6 @@ export function useCollections() {
     }
   }
 
-  const createWorkbenchExport = () => ({
-    schema: 'vue-api-workbench.collection.v1',
-    exportedAt: new Date().toISOString(),
-    collections: workbench.treeItems.value.map(group => ({
-      name: group.name,
-      icon: group.icon,
-      requests: group.requests.map(request => ({
-        id: request.id,
-        method: request.method,
-        name: request.name,
-        path: request.path,
-      })),
-    })),
-    rootRequests: workbench.rootRequests.value.map(request => ({
-      id: request.id,
-      method: request.method,
-      name: request.name,
-      path: request.path,
-    })),
-  })
-
   const activeCollection = computed(() => {
     if (activeCollectionName.value === 'all') return null
     return workbench.treeItems.value.find(group => group.name === activeCollectionName.value) ?? null
@@ -88,10 +67,15 @@ export function useCollections() {
     }
   }
 
-  const exportCollections = () => {
+  const exportCollections = async () => {
     if (!import.meta.client) return
+    if (!workspaceId.value) {
+      throw new Error('No workspace selected')
+    }
 
-    const payload = JSON.stringify(createWorkbenchExport(), null, 2)
+    const { get } = useApiClient()
+    const exportPayload = await get<unknown>(`/v1/collections/export?workspaceId=${encodeURIComponent(workspaceId.value)}`)
+    const payload = JSON.stringify(exportPayload, null, 2)
     const blob = new Blob([payload], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
