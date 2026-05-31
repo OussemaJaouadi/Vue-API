@@ -71,6 +71,14 @@ type openAPIInfo struct {
 	Title string `json:"title"`
 }
 
+type swaggerImport struct {
+	Swagger  string                    `json:"swagger"`
+	BasePath string                    `json:"basePath"`
+	Info     openAPIInfo               `json:"info"`
+	Paths    map[string]map[string]any `json:"paths"`
+	Consumes []string                  `json:"consumes"`
+}
+
 func ImportWorkbenchExport(ctx context.Context, repo Repository, workspaceID string, payload json.RawMessage) (ImportResult, error) {
 	if repo == nil {
 		return ImportResult{}, errors.New("collection repository is required")
@@ -161,6 +169,9 @@ func ImportContent(ctx context.Context, repo Repository, workspaceID string, pay
 	if version, ok := envelope["openapi"].(string); ok && version != "" {
 		return importOpenAPI(ctx, repo, workspaceID, payload)
 	}
+	if envelope["swagger"] == "2.0" {
+		return importSwagger(ctx, repo, workspaceID, payload)
+	}
 
 	return ImportResult{}, ErrUnsupportedImportFormat
 }
@@ -234,11 +245,11 @@ func PreviewImportContent(fileName string, content string) ImportPreview {
 		return ImportPreview{
 			FileName: fileName,
 			Format:   "Swagger 2.0",
-			Status:   "unsupported",
+			Status:   "ready",
 			Summary:  fmt.Sprintf("%d paths detected", len(paths)),
 			Details: []string{
 				"Backend detected the legacy spec shape.",
-				"Parser adapter will normalize it before import.",
+				"Operations will be normalized into one collection with request rows.",
 			},
 		}
 	}
@@ -381,6 +392,59 @@ func importOpenAPI(ctx context.Context, repo Repository, workspaceID string, pay
 	}, nil
 }
 
+func importSwagger(ctx context.Context, repo Repository, workspaceID string, payload json.RawMessage) (ImportResult, error) {
+	if repo == nil {
+		return ImportResult{}, errors.New("collection repository is required")
+	}
+	if strings.TrimSpace(workspaceID) == "" {
+		return ImportResult{}, ErrInvalidImportPayload
+	}
+
+	var input swaggerImport
+	if err := json.Unmarshal(payload, &input); err != nil {
+		return ImportResult{}, ErrInvalidImportPayload
+	}
+	if input.Swagger != "2.0" {
+		return ImportResult{}, ErrUnsupportedImportFormat
+	}
+
+	existingNames, err := folderNameSet(ctx, repo, workspaceID)
+	if err != nil {
+		return ImportResult{}, err
+	}
+
+	collectionName := uniqueFolderName(cleanCollectionName(input.Info.Title), existingNames)
+	folder, err := repo.CreateFolder(ctx, CreateFolderParams{
+		WorkspaceID: workspaceID,
+		Name:        collectionName,
+		Icon:        "PhGlobe",
+	})
+	if err != nil {
+		return ImportResult{}, err
+	}
+
+	requests := swaggerRequests(input)
+	requestIDs, created, err := importRequests(ctx, repo, workspaceID, &folder.ID, requests)
+	if err != nil {
+		return ImportResult{}, err
+	}
+	if len(requestIDs) > 0 {
+		if err := repo.ReorderRequests(ctx, workspaceID, []RequestOrderGroup{{
+			CollectionID: &folder.ID,
+			RequestIDs:   requestIDs,
+		}}); err != nil {
+			return ImportResult{}, err
+		}
+	}
+
+	return ImportResult{
+		Format:             "Swagger 2.0",
+		CollectionsCreated: 1,
+		RequestsCreated:    created,
+		Warnings:           []string{},
+	}, nil
+}
+
 func openAPIRequests(input openAPIImport) []workbenchRequest {
 	paths := make([]string, 0, len(input.Paths))
 	for path := range input.Paths {
@@ -411,6 +475,50 @@ func openAPIRequests(input openAPIImport) []workbenchRequest {
 	}
 
 	return requests
+}
+
+func swaggerRequests(input swaggerImport) []workbenchRequest {
+	paths := make([]string, 0, len(input.Paths))
+	for path := range input.Paths {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	requests := make([]workbenchRequest, 0)
+	for _, path := range paths {
+		pathItem := input.Paths[path]
+		for _, method := range []string{"get", "post", "put", "patch", "delete", "options", "head"} {
+			operation := objectValue(pathItem[method])
+			if operation == nil {
+				continue
+			}
+
+			requests = append(requests, workbenchRequest{
+				Method:       strings.ToUpper(method),
+				Name:         openAPIOperationName(method, path, operation),
+				Path:         joinSwaggerPath(input.BasePath, path),
+				QueryParams:  openAPIQueryParams(operation),
+				Headers:      json.RawMessage("[]"),
+				Body:         swaggerRequestBody(input, operation),
+				BodyLanguage: "json",
+				AuthConfig:   json.RawMessage("{}"),
+			})
+		}
+	}
+
+	return requests
+}
+
+func joinSwaggerPath(basePath string, path string) string {
+	basePath = strings.TrimRight(strings.TrimSpace(basePath), "/")
+	if basePath == "" {
+		return path
+	}
+	if strings.HasPrefix(path, "/") {
+		return basePath + path
+	}
+
+	return basePath + "/" + path
 }
 
 func openAPIOperationName(method string, path string, operation map[string]any) string {
@@ -454,6 +562,39 @@ func openAPIRequestBody(operation map[string]any) string {
 	}
 
 	return ""
+}
+
+func swaggerRequestBody(input swaggerImport, operation map[string]any) string {
+	for _, parameterValue := range arrayValue(operation["parameters"]) {
+		parameter := objectValue(parameterValue)
+		if parameter["in"] == "body" {
+			return "{}"
+		}
+	}
+
+	consumes := stringArrayValue(operation["consumes"])
+	if len(consumes) == 0 {
+		consumes = input.Consumes
+	}
+	for _, mediaType := range consumes {
+		if mediaType == "application/json" {
+			return "{}"
+		}
+	}
+
+	return ""
+}
+
+func stringArrayValue(value any) []string {
+	values := arrayValue(value)
+	result := make([]string, 0, len(values))
+	for _, item := range values {
+		if value, ok := item.(string); ok {
+			result = append(result, value)
+		}
+	}
+
+	return result
 }
 
 func mustJSON(value any, fallback string) json.RawMessage {

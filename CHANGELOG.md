@@ -4,6 +4,7 @@
 
 ## New
 
+- Added Swagger 2.0 JSON collection import adapter that normalizes legacy operations into persisted request rows.
 - Added OpenAPI JSON collection import adapter that maps operations into request rows with query parameters and request body placeholders.
 - Added backend import preview endpoint for Workbench, OpenAPI, Swagger, Postman, YAML, invalid JSON, and unknown JSON detection.
 - Added native Workbench collection export backend endpoint with workspace permission checks and persisted request payload serialization.

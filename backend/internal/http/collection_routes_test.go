@@ -428,6 +428,62 @@ func TestCollectionRoutes_ImportOpenAPIJSON(t *testing.T) {
 	assert.Equal(t, "currentUser", requests[1].(map[string]any)["name"])
 }
 
+func TestCollectionRoutes_ImportSwaggerJSON(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import", map[string]any{
+		"workspaceId": wsID,
+		"payload": map[string]any{
+			"swagger":  "2.0",
+			"basePath": "/v1",
+			"info": map[string]any{
+				"title": "Legacy API",
+			},
+			"paths": map[string]any{
+				"/orders": map[string]any{
+					"post": map[string]any{
+						"operationId": "createOrder",
+						"consumes":    []any{"application/json"},
+						"parameters": []any{
+							map[string]any{"name": "trace", "in": "query"},
+							map[string]any{"name": "payload", "in": "body"},
+						},
+					},
+				},
+			},
+		},
+	}, token)
+	require.Equal(t, http.StatusCreated, resp.Code)
+
+	var importBody map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &importBody))
+	assert.Equal(t, "Swagger 2.0", importBody["format"])
+	assert.Equal(t, float64(1), importBody["collectionsCreated"])
+	assert.Equal(t, float64(1), importBody["requestsCreated"])
+
+	getResp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId="+wsID, nil, token)
+	require.Equal(t, http.StatusOK, getResp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(getResp.Body.Bytes(), &body))
+	collections := body["collections"].([]any)
+	require.Len(t, collections, 1)
+	imported := collections[0].(map[string]any)
+	assert.Equal(t, "Legacy API", imported["name"])
+
+	requests := imported["requests"].([]any)
+	require.Len(t, requests, 1)
+	request := requests[0].(map[string]any)
+	assert.Equal(t, "POST", request["method"])
+	assert.Equal(t, "createOrder", request["name"])
+	assert.Equal(t, "/v1/orders", request["path"])
+	assert.Equal(t, "{}", request["body"])
+
+	queryParams := request["queryParams"].([]any)
+	require.Len(t, queryParams, 1)
+	assert.Equal(t, "trace", queryParams[0].(map[string]any)["key"])
+}
+
 func TestCollectionRoutes_ImportRequiresManageCollectionsPermission(t *testing.T) {
 	router, token, wsID := collectionTestDepsWithRole(t, "tester")
 
@@ -478,6 +534,23 @@ func TestCollectionRoutes_PreviewOpenAPIImport(t *testing.T) {
 	var body map[string]any
 	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
 	assert.Equal(t, "OpenAPI 3.1.0", body["format"])
+	assert.Equal(t, "ready", body["status"])
+	assert.Equal(t, "1 paths detected", body["summary"])
+}
+
+func TestCollectionRoutes_PreviewSwaggerImport(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import/preview", map[string]any{
+		"workspaceId": wsID,
+		"fileName":    "swagger.json",
+		"content":     `{"swagger":"2.0","paths":{"/orders":{"post":{}}}}`,
+	}, token)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.Equal(t, "Swagger 2.0", body["format"])
 	assert.Equal(t, "ready", body["status"])
 	assert.Equal(t, "1 paths detected", body["summary"])
 }
