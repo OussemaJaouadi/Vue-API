@@ -85,7 +85,7 @@ export function useCollections() {
     URL.revokeObjectURL(url)
   }
 
-  const importCollections = async (payload: unknown) => {
+  const importCollections = async (fileName: string, content: string) => {
     if (!workspaceId.value) {
       throw new Error('No workspace selected')
     }
@@ -98,7 +98,8 @@ export function useCollections() {
       warnings: string[]
     }>('/v1/collections/import', {
       workspaceId: workspaceId.value,
-      payload,
+      fileName,
+      content,
     })
   }
 

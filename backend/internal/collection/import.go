@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 const WorkbenchExportSchema = "vue-api-workbench.collection.v1"
@@ -176,29 +178,44 @@ func ImportContent(ctx context.Context, repo Repository, workspaceID string, pay
 	return ImportResult{}, ErrUnsupportedImportFormat
 }
 
-func PreviewImportContent(fileName string, content string) ImportPreview {
-	extension := strings.ToLower(filepath.Ext(fileName))
-	if extension == ".yaml" || extension == ".yml" {
-		return ImportPreview{
-			FileName: fileName,
-			Format:   "YAML spec",
-			Status:   "unsupported",
-			Summary:  "YAML upload selected",
-			Details: []string{
-				"YAML parsing belongs in the backend parser service.",
-				"The UI accepts the file type so the flow is visible now.",
-			},
-		}
+func ImportContentBytes(ctx context.Context, repo Repository, workspaceID string, fileName string, content []byte) (ImportResult, error) {
+	payload, err := normalizeImportContent(fileName, content)
+	if err != nil {
+		return ImportResult{}, err
 	}
 
-	var payload map[string]any
-	if err := json.Unmarshal([]byte(content), &payload); err != nil {
+	return ImportContent(ctx, repo, workspaceID, payload)
+}
+
+func PreviewImportContent(fileName string, content string) ImportPreview {
+	rawPayload, err := normalizeImportContent(fileName, []byte(content))
+	if err != nil {
+		if isYAMLFile(fileName) {
+			return ImportPreview{
+				FileName: fileName,
+				Format:   "Invalid YAML",
+				Status:   "error",
+				Summary:  "Could not parse file",
+				Details:  []string{"Check that the file is valid YAML before importing."},
+			}
+		}
 		return ImportPreview{
 			FileName: fileName,
 			Format:   "Invalid JSON",
 			Status:   "error",
 			Summary:  "Could not parse file",
 			Details:  []string{"Check that the file is valid JSON before importing."},
+		}
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(rawPayload, &payload); err != nil {
+		return ImportPreview{
+			FileName: fileName,
+			Format:   "Invalid import payload",
+			Status:   "error",
+			Summary:  "Could not parse file",
+			Details:  []string{"Check that the file content can be normalized before importing."},
 		}
 	}
 
@@ -293,6 +310,52 @@ func objectValue(value any) map[string]any {
 	}
 
 	return values
+}
+
+func normalizeImportContent(fileName string, content []byte) (json.RawMessage, error) {
+	if isYAMLFile(fileName) {
+		var decoded any
+		if err := yaml.Unmarshal(content, &decoded); err != nil {
+			return nil, ErrInvalidImportPayload
+		}
+		raw, err := json.Marshal(normalizeYAMLValue(decoded))
+		if err != nil {
+			return nil, ErrInvalidImportPayload
+		}
+
+		return json.RawMessage(raw), nil
+	}
+
+	var decoded any
+	if err := json.Unmarshal(content, &decoded); err != nil {
+		return nil, ErrInvalidImportPayload
+	}
+
+	return json.RawMessage(content), nil
+}
+
+func isYAMLFile(fileName string) bool {
+	extension := strings.ToLower(filepath.Ext(fileName))
+	return extension == ".yaml" || extension == ".yml"
+}
+
+func normalizeYAMLValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		normalized := make(map[string]any, len(typed))
+		for key, value := range typed {
+			normalized[key] = normalizeYAMLValue(value)
+		}
+		return normalized
+	case []any:
+		normalized := make([]any, 0, len(typed))
+		for _, value := range typed {
+			normalized = append(normalized, normalizeYAMLValue(value))
+		}
+		return normalized
+	default:
+		return typed
+	}
 }
 
 func ExportWorkbenchExport(ctx context.Context, repo Repository, workspaceID string, exportedAt time.Time) (workbenchExport, error) {

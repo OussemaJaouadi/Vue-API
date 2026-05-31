@@ -484,6 +484,43 @@ func TestCollectionRoutes_ImportSwaggerJSON(t *testing.T) {
 	assert.Equal(t, "trace", queryParams[0].(map[string]any)["key"])
 }
 
+func TestCollectionRoutes_ImportOpenAPIYAML(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import", map[string]any{
+		"workspaceId": wsID,
+		"fileName":    "openapi.yaml",
+		"content": `
+openapi: 3.1.0
+info:
+  title: YAML API
+paths:
+  /healthz:
+    get:
+      summary: Health check
+`,
+	}, token)
+	require.Equal(t, http.StatusCreated, resp.Code)
+
+	var importBody map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &importBody))
+	assert.Equal(t, "OpenAPI 3.1.0", importBody["format"])
+	assert.Equal(t, float64(1), importBody["collectionsCreated"])
+	assert.Equal(t, float64(1), importBody["requestsCreated"])
+
+	getResp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId="+wsID, nil, token)
+	require.Equal(t, http.StatusOK, getResp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(getResp.Body.Bytes(), &body))
+	collections := body["collections"].([]any)
+	require.Len(t, collections, 1)
+	assert.Equal(t, "YAML API", collections[0].(map[string]any)["name"])
+	requests := collections[0].(map[string]any)["requests"].([]any)
+	require.Len(t, requests, 1)
+	assert.Equal(t, "Health check", requests[0].(map[string]any)["name"])
+}
+
 func TestCollectionRoutes_ImportRequiresManageCollectionsPermission(t *testing.T) {
 	router, token, wsID := collectionTestDepsWithRole(t, "tester")
 
@@ -553,6 +590,44 @@ func TestCollectionRoutes_PreviewSwaggerImport(t *testing.T) {
 	assert.Equal(t, "Swagger 2.0", body["format"])
 	assert.Equal(t, "ready", body["status"])
 	assert.Equal(t, "1 paths detected", body["summary"])
+}
+
+func TestCollectionRoutes_PreviewOpenAPIYAMLImport(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import/preview", map[string]any{
+		"workspaceId": wsID,
+		"fileName":    "openapi.yaml",
+		"content": `
+openapi: 3.1.0
+paths:
+  /healthz:
+    get: {}
+`,
+	}, token)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.Equal(t, "OpenAPI 3.1.0", body["format"])
+	assert.Equal(t, "ready", body["status"])
+	assert.Equal(t, "1 paths detected", body["summary"])
+}
+
+func TestCollectionRoutes_PreviewInvalidYAMLImport(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import/preview", map[string]any{
+		"workspaceId": wsID,
+		"fileName":    "broken.yaml",
+		"content":     `openapi: [`,
+	}, token)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.Equal(t, "Invalid YAML", body["format"])
+	assert.Equal(t, "error", body["status"])
 }
 
 func TestCollectionRoutes_PreviewInvalidJSONImport(t *testing.T) {

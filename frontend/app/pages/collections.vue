@@ -26,7 +26,8 @@ const {
 
 const importInput = ref<HTMLInputElement | null>(null)
 const importOpen = ref(false)
-const importPayload = ref<unknown | null>(null)
+const importFileName = ref('')
+const importContent = ref('')
 const importing = ref(false)
 const exporting = ref(false)
 const importPreview = ref<{
@@ -44,12 +45,14 @@ const previewImportFile = async (event: Event) => {
   try {
     const content = await file.text()
     const preview = await previewImportContent(file.name, content)
-    importPayload.value = preview.status === 'ready' ? JSON.parse(content) : null
+    importFileName.value = preview.status === 'ready' ? file.name : ''
+    importContent.value = preview.status === 'ready' ? content : ''
     importPreview.value = preview
     importOpen.value = true
   }
   catch (error: any) {
-    importPayload.value = null
+    importFileName.value = ''
+    importContent.value = ''
     importPreview.value = {
       fileName: file.name,
       format: 'Preview failed',
@@ -66,14 +69,15 @@ const previewImportFile = async (event: Event) => {
 }
 
 const confirmImport = async () => {
-  if (!importPayload.value || !importPreview.value || importing.value) return
+  if (!importFileName.value || !importContent.value || !importPreview.value || importing.value) return
 
   importing.value = true
   try {
-    const result = await importCollections(importPayload.value)
+    const result = await importCollections(importFileName.value, importContent.value)
     await workbench.loadCollections()
     importOpen.value = false
-    importPayload.value = null
+    importFileName.value = ''
+    importContent.value = ''
     importPreview.value = null
     toast.success('Collection import completed', {
       description: `${result.collectionsCreated} collections / ${result.requestsCreated} requests ingested`,

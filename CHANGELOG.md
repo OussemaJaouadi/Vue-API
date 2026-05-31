@@ -4,6 +4,7 @@
 
 ## New
 
+- Added YAML import parsing support for OpenAPI and Swagger collection files.
 - Added Swagger 2.0 JSON collection import adapter that normalizes legacy operations into persisted request rows.
 - Added OpenAPI JSON collection import adapter that maps operations into request rows with query parameters and request body placeholders.
 - Added backend import preview endpoint for Workbench, OpenAPI, Swagger, Postman, YAML, invalid JSON, and unknown JSON detection.
@@ -54,6 +55,7 @@
 
 ## New
 
+- Updated collection import confirmation to submit raw file content so YAML imports work without browser-side parsing.
 - Moved collection import preview detection from frontend-only logic to the backend preview endpoint.
 - Added import/export feedback on the collections page with busy export state and success/failure toasts.
 - Wired the collections export action to download the backend export payload instead of serializing stale local state.
