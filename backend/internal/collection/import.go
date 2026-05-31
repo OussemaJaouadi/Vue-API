@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -79,6 +80,48 @@ type swaggerImport struct {
 	Info     openAPIInfo               `json:"info"`
 	Paths    map[string]map[string]any `json:"paths"`
 	Consumes []string                  `json:"consumes"`
+}
+
+type postmanCollection struct {
+	Info postmanInfo   `json:"info"`
+	Item []postmanItem `json:"item"`
+}
+
+type postmanInfo struct {
+	ID   string `json:"_postman_id"`
+	Name string `json:"name"`
+}
+
+type postmanItem struct {
+	Name    string         `json:"name"`
+	Item    []postmanItem  `json:"item"`
+	Request postmanRequest `json:"request"`
+}
+
+type postmanRequest struct {
+	Method string      `json:"method"`
+	Header []postmanKV `json:"header"`
+	Body   postmanBody `json:"body"`
+	URL    any         `json:"url"`
+	Auth   postmanAuth `json:"auth"`
+}
+
+type postmanKV struct {
+	Key      string `json:"key"`
+	Value    string `json:"value"`
+	Disabled bool   `json:"disabled"`
+}
+
+type postmanBody struct {
+	Mode string `json:"mode"`
+	Raw  string `json:"raw"`
+}
+
+type postmanAuth struct {
+	Type   string      `json:"type"`
+	Bearer []postmanKV `json:"bearer"`
+	Basic  []postmanKV `json:"basic"`
+	APIKey []postmanKV `json:"apikey"`
 }
 
 func ImportWorkbenchExport(ctx context.Context, repo Repository, workspaceID string, payload json.RawMessage) (ImportResult, error) {
@@ -173,6 +216,9 @@ func ImportContent(ctx context.Context, repo Repository, workspaceID string, pay
 	}
 	if envelope["swagger"] == "2.0" {
 		return importSwagger(ctx, repo, workspaceID, payload)
+	}
+	if _, ok := envelope["item"]; ok {
+		return importPostman(ctx, repo, workspaceID, payload)
 	}
 
 	return ImportResult{}, ErrUnsupportedImportFormat
@@ -276,11 +322,11 @@ func PreviewImportContent(fileName string, content string) ImportPreview {
 		return ImportPreview{
 			FileName: fileName,
 			Format:   "Postman collection",
-			Status:   "unsupported",
+			Status:   "ready",
 			Summary:  fmt.Sprintf("%d top-level items detected", len(items)),
 			Details: []string{
 				"Backend detected a Postman collection.",
-				"Postman normalization is documented as a later parser adapter.",
+				"Folders and request items will be normalized into collections and requests.",
 			},
 		}
 	}
@@ -508,6 +554,86 @@ func importSwagger(ctx context.Context, repo Repository, workspaceID string, pay
 	}, nil
 }
 
+func importPostman(ctx context.Context, repo Repository, workspaceID string, payload json.RawMessage) (ImportResult, error) {
+	if repo == nil {
+		return ImportResult{}, errors.New("collection repository is required")
+	}
+	if strings.TrimSpace(workspaceID) == "" {
+		return ImportResult{}, ErrInvalidImportPayload
+	}
+
+	var input postmanCollection
+	if err := json.Unmarshal(payload, &input); err != nil {
+		return ImportResult{}, ErrInvalidImportPayload
+	}
+	if len(input.Item) == 0 {
+		return ImportResult{}, ErrUnsupportedImportFormat
+	}
+
+	existingNames, err := folderNameSet(ctx, repo, workspaceID)
+	if err != nil {
+		return ImportResult{}, err
+	}
+
+	result := ImportResult{
+		Format:   "Postman collection",
+		Warnings: []string{},
+	}
+	orderGroups := make([]RequestOrderGroup, 0, len(input.Item)+1)
+	rootRequests := make([]workbenchRequest, 0)
+	for _, item := range input.Item {
+		if len(item.Item) > 0 {
+			collectionName := uniqueFolderName(cleanCollectionName(item.Name), existingNames)
+			folder, err := repo.CreateFolder(ctx, CreateFolderParams{
+				WorkspaceID: workspaceID,
+				Name:        collectionName,
+				Icon:        "PhGlobe",
+			})
+			if err != nil {
+				return ImportResult{}, err
+			}
+			existingNames[folder.Name] = true
+			result.CollectionsCreated++
+
+			requests := postmanRequests(item.Item)
+			requestIDs, created, err := importRequests(ctx, repo, workspaceID, &folder.ID, requests)
+			if err != nil {
+				return ImportResult{}, err
+			}
+			result.RequestsCreated += created
+			orderGroups = append(orderGroups, RequestOrderGroup{
+				CollectionID: &folder.ID,
+				RequestIDs:   requestIDs,
+			})
+			continue
+		}
+
+		if item.Request.Method != "" || item.Request.URL != nil {
+			rootRequests = append(rootRequests, postmanRequestToWorkbench(item))
+		}
+	}
+
+	rootIDs, created, err := importRequests(ctx, repo, workspaceID, nil, rootRequests)
+	if err != nil {
+		return ImportResult{}, err
+	}
+	result.RequestsCreated += created
+	if len(rootIDs) > 0 {
+		orderGroups = append(orderGroups, RequestOrderGroup{
+			CollectionID: nil,
+			RequestIDs:   rootIDs,
+		})
+	}
+
+	if len(orderGroups) > 0 {
+		if err := repo.ReorderRequests(ctx, workspaceID, orderGroups); err != nil {
+			return ImportResult{}, err
+		}
+	}
+
+	return result, nil
+}
+
 func openAPIRequests(input openAPIImport) []workbenchRequest {
 	paths := make([]string, 0, len(input.Paths))
 	for path := range input.Paths {
@@ -570,6 +696,167 @@ func swaggerRequests(input swaggerImport) []workbenchRequest {
 	}
 
 	return requests
+}
+
+func postmanRequests(items []postmanItem) []workbenchRequest {
+	requests := make([]workbenchRequest, 0, len(items))
+	for _, item := range items {
+		if len(item.Item) > 0 {
+			requests = append(requests, postmanRequests(item.Item)...)
+			continue
+		}
+		if item.Request.Method == "" && item.Request.URL == nil {
+			continue
+		}
+		requests = append(requests, postmanRequestToWorkbench(item))
+	}
+
+	return requests
+}
+
+func postmanRequestToWorkbench(item postmanItem) workbenchRequest {
+	path, queryParams := postmanURL(item.Request.URL)
+	return workbenchRequest{
+		Method:       cleanMethod(item.Request.Method),
+		Name:         cleanRequestName(item.Name, path),
+		Path:         path,
+		QueryParams:  queryParams,
+		Headers:      postmanHeaders(item.Request.Header),
+		Body:         postmanBodyRaw(item.Request.Body),
+		BodyLanguage: "json",
+		AuthConfig:   postmanAuthConfig(item.Request.Auth),
+	}
+}
+
+func postmanURL(value any) (string, json.RawMessage) {
+	switch typed := value.(type) {
+	case string:
+		return postmanPathFromRaw(typed), json.RawMessage("[]")
+	case map[string]any:
+		raw, _ := typed["raw"].(string)
+		path := postmanPathFromRaw(raw)
+		if path == "/" {
+			path = postmanPathFromSegments(arrayValue(typed["path"]))
+		}
+		return path, postmanQueryRows(arrayValue(typed["query"]))
+	default:
+		return "/", json.RawMessage("[]")
+	}
+}
+
+func postmanPathFromRaw(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	if parsed.Path == "" {
+		return "/"
+	}
+
+	return parsed.Path
+}
+
+func postmanPathFromSegments(segments []any) string {
+	parts := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		if value, ok := segment.(string); ok && value != "" {
+			parts = append(parts, value)
+		}
+	}
+	if len(parts) == 0 {
+		return "/"
+	}
+
+	return "/" + strings.Join(parts, "/")
+}
+
+func postmanQueryRows(query []any) json.RawMessage {
+	rows := make([]map[string]any, 0, len(query))
+	for _, value := range query {
+		item := objectValue(value)
+		key, _ := item["key"].(string)
+		if strings.TrimSpace(key) == "" {
+			continue
+		}
+		queryValue, _ := item["value"].(string)
+		disabled, _ := item["disabled"].(bool)
+		rows = append(rows, map[string]any{
+			"id":      fmt.Sprintf("postman-query-%s", key),
+			"key":     key,
+			"value":   queryValue,
+			"enabled": !disabled,
+		})
+	}
+
+	return mustJSON(rows, "[]")
+}
+
+func postmanHeaders(headers []postmanKV) json.RawMessage {
+	rows := make([]map[string]any, 0, len(headers))
+	for _, header := range headers {
+		if strings.TrimSpace(header.Key) == "" {
+			continue
+		}
+		rows = append(rows, map[string]any{
+			"id":      fmt.Sprintf("postman-header-%s", header.Key),
+			"key":     header.Key,
+			"value":   header.Value,
+			"enabled": !header.Disabled,
+		})
+	}
+
+	return mustJSON(rows, "[]")
+}
+
+func postmanBodyRaw(body postmanBody) string {
+	if body.Mode == "raw" {
+		return body.Raw
+	}
+
+	return ""
+}
+
+func postmanAuthConfig(auth postmanAuth) json.RawMessage {
+	switch auth.Type {
+	case "bearer":
+		return mustJSON(map[string]any{
+			"mode":        "bearer",
+			"bearerToken": postmanAuthValue(auth.Bearer, "token"),
+		}, "{}")
+	case "basic":
+		return mustJSON(map[string]any{
+			"mode":          "basic",
+			"basicUsername": postmanAuthValue(auth.Basic, "username"),
+			"basicPassword": postmanAuthValue(auth.Basic, "password"),
+		}, "{}")
+	case "apikey":
+		return mustJSON(map[string]any{
+			"mode":            "api-key",
+			"apiKeyName":      postmanAuthValue(auth.APIKey, "key"),
+			"apiKeyValue":     postmanAuthValue(auth.APIKey, "value"),
+			"apiKeyPlacement": postmanAPIKeyPlacement(auth.APIKey),
+		}, "{}")
+	default:
+		return json.RawMessage("{}")
+	}
+}
+
+func postmanAuthValue(values []postmanKV, key string) string {
+	for _, value := range values {
+		if value.Key == key {
+			return value.Value
+		}
+	}
+
+	return ""
+}
+
+func postmanAPIKeyPlacement(values []postmanKV) string {
+	if postmanAuthValue(values, "in") == "query" {
+		return "query"
+	}
+
+	return "header"
 }
 
 func joinSwaggerPath(basePath string, path string) string {

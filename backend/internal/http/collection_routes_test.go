@@ -521,6 +521,89 @@ paths:
 	assert.Equal(t, "Health check", requests[0].(map[string]any)["name"])
 }
 
+func TestCollectionRoutes_ImportPostmanCollection(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import", map[string]any{
+		"workspaceId": wsID,
+		"payload": map[string]any{
+			"info": map[string]any{
+				"_postman_id": "postman-id",
+				"name":        "Postman API",
+			},
+			"item": []any{
+				map[string]any{
+					"name": "Authentication",
+					"item": []any{
+						map[string]any{
+							"name": "Login",
+							"request": map[string]any{
+								"method": "POST",
+								"header": []any{
+									map[string]any{"key": "Content-Type", "value": "application/json"},
+								},
+								"body": map[string]any{"mode": "raw", "raw": `{"login":"owner@example.com"}`},
+								"url": map[string]any{
+									"raw": "https://api.example.com/auth/login?include_meta=true",
+									"query": []any{
+										map[string]any{"key": "include_meta", "value": "true"},
+									},
+								},
+								"auth": map[string]any{
+									"type": "bearer",
+									"bearer": []any{
+										map[string]any{"key": "token", "value": "{{accessToken}}"},
+									},
+								},
+							},
+						},
+					},
+				},
+				map[string]any{
+					"name": "Health",
+					"request": map[string]any{
+						"method": "GET",
+						"url":    "https://api.example.com/healthz",
+					},
+				},
+			},
+		},
+	}, token)
+	require.Equal(t, http.StatusCreated, resp.Code)
+
+	var importBody map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &importBody))
+	assert.Equal(t, "Postman collection", importBody["format"])
+	assert.Equal(t, float64(1), importBody["collectionsCreated"])
+	assert.Equal(t, float64(2), importBody["requestsCreated"])
+
+	getResp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId="+wsID, nil, token)
+	require.Equal(t, http.StatusOK, getResp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(getResp.Body.Bytes(), &body))
+	collections := body["collections"].([]any)
+	require.Len(t, collections, 1)
+	assert.Equal(t, "Authentication", collections[0].(map[string]any)["name"])
+	requests := collections[0].(map[string]any)["requests"].([]any)
+	require.Len(t, requests, 1)
+	login := requests[0].(map[string]any)
+	assert.Equal(t, "POST", login["method"])
+	assert.Equal(t, "/auth/login", login["path"])
+	assert.Equal(t, `{"login":"owner@example.com"}`, login["body"])
+	assert.Equal(t, "bearer", login["authConfig"].(map[string]any)["mode"])
+	assert.Equal(t, "{{accessToken}}", login["authConfig"].(map[string]any)["bearerToken"])
+
+	queryParams := login["queryParams"].([]any)
+	require.Len(t, queryParams, 1)
+	assert.Equal(t, "include_meta", queryParams[0].(map[string]any)["key"])
+
+	rootRequests := body["rootRequests"].([]any)
+	require.Len(t, rootRequests, 1)
+	assert.Equal(t, "Health", rootRequests[0].(map[string]any)["name"])
+	assert.Equal(t, "/healthz", rootRequests[0].(map[string]any)["path"])
+}
+
 func TestCollectionRoutes_ImportRequiresManageCollectionsPermission(t *testing.T) {
 	router, token, wsID := collectionTestDepsWithRole(t, "tester")
 
@@ -612,6 +695,23 @@ paths:
 	assert.Equal(t, "OpenAPI 3.1.0", body["format"])
 	assert.Equal(t, "ready", body["status"])
 	assert.Equal(t, "1 paths detected", body["summary"])
+}
+
+func TestCollectionRoutes_PreviewPostmanImport(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodPost, "/v1/collections/import/preview", map[string]any{
+		"workspaceId": wsID,
+		"fileName":    "postman.json",
+		"content":     `{"info":{"_postman_id":"id","name":"Postman API"},"item":[{"name":"Health","request":{"method":"GET","url":"https://api.example.com/healthz"}}]}`,
+	}, token)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.Equal(t, "Postman collection", body["format"])
+	assert.Equal(t, "ready", body["status"])
+	assert.Equal(t, "1 top-level items detected", body["summary"])
 }
 
 func TestCollectionRoutes_PreviewInvalidYAMLImport(t *testing.T) {

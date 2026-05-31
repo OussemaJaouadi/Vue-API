@@ -4,6 +4,7 @@
 
 ## New
 
+- Added Postman collection import adapter for folders, root request items, query params, headers, raw bodies, and simple auth mapping.
 - Added YAML import parsing support for OpenAPI and Swagger collection files.
 - Added Swagger 2.0 JSON collection import adapter that normalizes legacy operations into persisted request rows.
 - Added OpenAPI JSON collection import adapter that maps operations into request rows with query parameters and request body placeholders.
