@@ -30,6 +30,12 @@ const importFileName = ref('')
 const importContent = ref('')
 const importing = ref(false)
 const exporting = ref(false)
+const importResult = ref<{
+  format: string
+  collectionsCreated: number
+  requestsCreated: number
+  warnings: string[]
+} | null>(null)
 const importPreview = ref<{
   fileName: string
   format: string
@@ -45,12 +51,14 @@ const previewImportFile = async (event: Event) => {
   try {
     const content = await file.text()
     const preview = await previewImportContent(file.name, content)
+    importResult.value = null
     importFileName.value = preview.status === 'ready' ? file.name : ''
     importContent.value = preview.status === 'ready' ? content : ''
     importPreview.value = preview
     importOpen.value = true
   }
   catch (error: any) {
+    importResult.value = null
     importFileName.value = ''
     importContent.value = ''
     importPreview.value = {
@@ -75,10 +83,15 @@ const confirmImport = async () => {
   try {
     const result = await importCollections(importFileName.value, importContent.value)
     await workbench.loadCollections()
-    importOpen.value = false
     importFileName.value = ''
     importContent.value = ''
-    importPreview.value = null
+    importResult.value = result
+    importPreview.value = {
+      ...importPreview.value,
+      status: 'ready',
+      summary: `${result.collectionsCreated} collections / ${result.requestsCreated} requests ingested`,
+      details: ['The backend persisted the imported collection data.', 'The workbench list has been refreshed from the database.'],
+    }
     toast.success('Collection import completed', {
       description: `${result.collectionsCreated} collections / ${result.requestsCreated} requests ingested`,
     })
@@ -221,6 +234,7 @@ const handleExport = async () => {
     <CollectionsImportSheet
       v-model:open="importOpen"
       :preview="importPreview"
+      :result="importResult"
       :importing="importing"
       @import="confirmImport"
     />

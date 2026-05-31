@@ -22,8 +22,16 @@ interface ImportPreview {
   details: string[]
 }
 
+interface ImportResult {
+  format: string
+  collectionsCreated: number
+  requestsCreated: number
+  warnings: string[]
+}
+
 const props = defineProps<{
   preview: ImportPreview | null
+  result?: ImportResult | null
   importing?: boolean
 }>()
 
@@ -34,12 +42,14 @@ defineEmits<{
 }>()
 
 const statusIcon = computed(() => {
+  if (props.result) return PhCheckCircle
   if (props.preview?.status === 'ready') return PhCheckCircle
   if (props.preview?.status === 'unsupported') return PhWarning
   return PhFileSearch
 })
 
 const statusColor = computed(() => {
+  if (props.result) return 'text-emerald-500'
   if (props.preview?.status === 'ready') return 'text-emerald-500'
   if (props.preview?.status === 'unsupported') return 'text-amber-500'
   return 'text-destructive'
@@ -111,6 +121,37 @@ const statusColor = computed(() => {
           </div>
         </div>
 
+        <!-- Import Result -->
+        <div v-if="result" class="border-b bg-emerald-500/5 p-6">
+          <div class="border-2 border-emerald-500/25 bg-background/60 p-4 shadow-[4px_4px_0_0_rgba(16,185,129,0.1)]">
+            <div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <PhCheckCircle class="size-4" />
+              <span class="font-mono text-[10px] font-black uppercase tracking-widest">Import Complete</span>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-3">
+              <div class="border border-emerald-500/20 bg-emerald-500/5 p-3">
+                <div class="font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">Collections</div>
+                <div class="mt-1 font-mono text-2xl font-black text-foreground">{{ result.collectionsCreated }}</div>
+              </div>
+              <div class="border border-emerald-500/20 bg-emerald-500/5 p-3">
+                <div class="font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground">Requests</div>
+                <div class="mt-1 font-mono text-2xl font-black text-foreground">{{ result.requestsCreated }}</div>
+              </div>
+            </div>
+
+            <div v-if="result.warnings.length > 0" class="mt-4 border-l-2 border-amber-500/60 pl-3">
+              <div
+                v-for="(warning, i) in result.warnings"
+                :key="i"
+                class="font-mono text-[10px] leading-relaxed text-amber-700/80 dark:text-amber-300/80"
+              >
+                • {{ warning }}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Warning for Unsupported -->
         <div v-if="preview.status === 'unsupported'" class="p-6 bg-amber-500/5">
           <div class="border-2 border-amber-500/20 p-4 space-y-2">
@@ -141,12 +182,12 @@ const statusColor = computed(() => {
         <div class="grid w-full gap-4 sm:grid-cols-2">
           <button
             class="group relative flex h-12 items-center justify-center gap-3 rounded-none border-2 border-primary/20 bg-primary/3 px-4 text-primary transition-all hover:border-primary/50 hover:bg-primary/10 hover:shadow-[4px_4px_0_0_rgba(16,185,129,0.15)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-            :disabled="preview?.status !== 'ready' || importing"
-            :class="(preview?.status !== 'ready' || importing) && 'opacity-50 cursor-not-allowed'"
+            :disabled="(!result && preview?.status !== 'ready') || importing"
+            :class="((!result && preview?.status !== 'ready') || importing) && 'opacity-50 cursor-not-allowed'"
             type="button"
-            @click="$emit('import')"
+            @click="result ? open = false : $emit('import')"
           >
-            <span class="font-mono text-[10px] font-black uppercase tracking-widest">{{ importing ? 'Importing...' : 'Confirm Ingestion' }}</span>
+            <span class="font-mono text-[10px] font-black uppercase tracking-widest">{{ importing ? 'Importing...' : result ? 'Done' : 'Confirm Ingestion' }}</span>
           </button>
 
           <button

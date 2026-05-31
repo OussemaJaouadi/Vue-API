@@ -56,6 +56,7 @@
 
 ## New
 
+- Added in-sheet collection import result summary with persisted collection/request counts and warning display.
 - Updated collection import confirmation to submit raw file content so YAML imports work without browser-side parsing.
 - Moved collection import preview detection from frontend-only logic to the backend preview endpoint.
 - Added import/export feedback on the collections page with busy export state and success/failure toasts.
