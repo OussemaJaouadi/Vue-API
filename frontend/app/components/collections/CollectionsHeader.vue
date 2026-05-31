@@ -84,11 +84,12 @@ defineEmits<{
           class="btn-tactile-muted flex h-9 items-center gap-2 px-3 font-mono text-[10px] font-black uppercase tracking-widest outline-none"
           :disabled="exporting"
           :class="exporting && 'cursor-wait opacity-60'"
+          :title="activeCollectionName === 'all' ? 'Export all collections' : `Export ${activeCollectionName}`"
           type="button"
           @click="$emit('export')"
         >
           <PhDownloadSimple class="size-3.5" />
-          <span class="hidden sm:inline">{{ exporting ? 'Exporting' : 'Export' }}</span>
+          <span class="hidden sm:inline">{{ exporting ? 'Exporting' : activeCollectionName === 'all' ? 'Export All' : 'Export Selected' }}</span>
         </button>
       </div>
 

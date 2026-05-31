@@ -74,13 +74,20 @@ export function useCollections() {
     }
 
     const { get } = useApiClient()
-    const exportPayload = await get<unknown>(`/v1/collections/export?workspaceId=${encodeURIComponent(workspaceId.value)}`)
+    const exportParams = new URLSearchParams({ workspaceId: workspaceId.value })
+    if (activeCollection.value?.id) {
+      exportParams.set('collectionId', activeCollection.value.id)
+    }
+
+    const exportPayload = await get<unknown>(`/v1/collections/export?${exportParams.toString()}`)
     const payload = JSON.stringify(exportPayload, null, 2)
     const blob = new Blob([payload], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
+    const exportScope = activeCollection.value?.name ?? 'collections'
+    const exportSlug = exportScope.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'collections'
     link.href = url
-    link.download = `vue-api-workbench-collections-${new Date().toISOString().slice(0, 10)}.json`
+    link.download = `vue-api-workbench-${exportSlug}-${new Date().toISOString().slice(0, 10)}.json`
     link.click()
     URL.revokeObjectURL(url)
   }

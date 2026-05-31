@@ -823,6 +823,83 @@ func TestCollectionRoutes_ExportWorkbenchData(t *testing.T) {
 	assert.Equal(t, "Health", rootRequests[0].(map[string]any)["name"])
 }
 
+func TestCollectionRoutes_ExportSelectedCollection(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	authFolderResp := performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
+		"workspaceId": wsID,
+		"name":        "Authentication",
+		"icon":        "PhKey",
+	}, token)
+	require.Equal(t, http.StatusCreated, authFolderResp.Code)
+
+	var authFolderBody map[string]any
+	require.NoError(t, json.Unmarshal(authFolderResp.Body.Bytes(), &authFolderBody))
+	authFolderID := authFolderBody["id"].(string)
+
+	realtimeFolderResp := performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
+		"workspaceId": wsID,
+		"name":        "Realtime",
+		"icon":        "PhBroadcast",
+	}, token)
+	require.Equal(t, http.StatusCreated, realtimeFolderResp.Code)
+
+	var realtimeFolderBody map[string]any
+	require.NoError(t, json.Unmarshal(realtimeFolderResp.Body.Bytes(), &realtimeFolderBody))
+	realtimeFolderID := realtimeFolderBody["id"].(string)
+
+	authRequestResp := performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]any{
+		"workspaceId":  wsID,
+		"collectionId": authFolderID,
+		"method":       "POST",
+		"name":         "Login",
+		"path":         "/auth/login",
+	}, token)
+	require.Equal(t, http.StatusCreated, authRequestResp.Code)
+
+	realtimeRequestResp := performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]any{
+		"workspaceId":  wsID,
+		"collectionId": realtimeFolderID,
+		"method":       "GET",
+		"name":         "Event stream",
+		"path":         "/events",
+	}, token)
+	require.Equal(t, http.StatusCreated, realtimeRequestResp.Code)
+
+	rootResp := performJSON(router, http.MethodPost, "/v1/collections/requests", map[string]any{
+		"workspaceId": wsID,
+		"method":      "GET",
+		"name":        "Health",
+		"path":        "/healthz",
+	}, token)
+	require.Equal(t, http.StatusCreated, rootResp.Code)
+
+	resp := performJSON(router, http.MethodGet, "/v1/collections/export?workspaceId="+wsID+"&collectionId="+authFolderID, nil, token)
+	require.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+
+	collections := body["collections"].([]any)
+	require.Len(t, collections, 1)
+	exportedCollection := collections[0].(map[string]any)
+	assert.Equal(t, "Authentication", exportedCollection["name"])
+
+	requests := exportedCollection["requests"].([]any)
+	require.Len(t, requests, 1)
+	assert.Equal(t, "Login", requests[0].(map[string]any)["name"])
+
+	rootRequests := body["rootRequests"].([]any)
+	assert.Empty(t, rootRequests)
+}
+
+func TestCollectionRoutes_ExportSelectedCollectionNotFound(t *testing.T) {
+	router, token, wsID := collectionTestDeps(t)
+
+	resp := performJSON(router, http.MethodGet, "/v1/collections/export?workspaceId="+wsID+"&collectionId=missing-collection", nil, token)
+	assert.Equal(t, http.StatusNotFound, resp.Code)
+}
+
 func TestCollectionRoutes_ExportRequiresWorkspaceMembership(t *testing.T) {
 	router, _, wsID := collectionTestDeps(t)
 	otherToken := registerCollectionRouteUser(t, router, "export-other@example.com", "exportother")

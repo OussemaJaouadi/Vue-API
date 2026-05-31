@@ -120,7 +120,9 @@ const handleExport = async () => {
   try {
     await exportCollections()
     toast.success('Collection export ready', {
-      description: 'Downloaded the persisted workspace collection payload',
+      description: activeCollectionName.value === 'all'
+        ? 'Downloaded all persisted workspace collections'
+        : `Downloaded ${activeCollectionName.value}`,
     })
   }
   catch (error: any) {

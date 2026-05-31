@@ -84,7 +84,17 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 			return echo.NewHTTPError(http.StatusForbidden, "Not authorized for this workspace")
 		}
 
-		result, err := collection.ExportWorkbenchExport(c.Request().Context(), deps.Collections, workspaceID, time.Now())
+		collectionID := c.QueryParam("collectionId")
+		var result any
+		var err error
+		if collectionID != "" {
+			result, err = collection.ExportWorkbenchCollection(c.Request().Context(), deps.Collections, workspaceID, collectionID, time.Now())
+		} else {
+			result, err = collection.ExportWorkbenchExport(c.Request().Context(), deps.Collections, workspaceID, time.Now())
+		}
+		if errors.Is(err, collection.ErrFolderNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, "Collection not found")
+		}
 		if err != nil {
 			return err
 		}

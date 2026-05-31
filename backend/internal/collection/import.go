@@ -448,6 +448,51 @@ func ExportWorkbenchExport(ctx context.Context, repo Repository, workspaceID str
 	return output, nil
 }
 
+func ExportWorkbenchCollection(ctx context.Context, repo Repository, workspaceID string, collectionID string, exportedAt time.Time) (workbenchExport, error) {
+	if repo == nil {
+		return workbenchExport{}, errors.New("collection repository is required")
+	}
+	if strings.TrimSpace(workspaceID) == "" || strings.TrimSpace(collectionID) == "" {
+		return workbenchExport{}, ErrInvalidImportPayload
+	}
+
+	folders, err := repo.ListFolders(ctx, workspaceID)
+	if err != nil {
+		return workbenchExport{}, err
+	}
+
+	var selected *Folder
+	for i := range folders {
+		if folders[i].ID == collectionID {
+			selected = &folders[i]
+			break
+		}
+	}
+	if selected == nil {
+		return workbenchExport{}, ErrFolderNotFound
+	}
+
+	requests, err := repo.ListRequests(ctx, workspaceID, &selected.ID)
+	if err != nil {
+		return workbenchExport{}, err
+	}
+
+	return workbenchExport{
+		Schema:     WorkbenchExportSchema,
+		ExportedAt: exportedAt.UTC().Format(time.RFC3339),
+		Collections: []workbenchCollection{
+			{
+				ID:        selected.ID,
+				Name:      selected.Name,
+				Icon:      selected.Icon,
+				SortOrder: selected.SortOrder,
+				Requests:  exportRequests(requests),
+			},
+		},
+		RootRequests: []workbenchRequest{},
+	}, nil
+}
+
 func importOpenAPI(ctx context.Context, repo Repository, workspaceID string, payload json.RawMessage) (ImportResult, error) {
 	if repo == nil {
 		return ImportResult{}, errors.New("collection repository is required")

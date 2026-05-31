@@ -4,6 +4,7 @@
 
 ## New
 
+- Added selected collection export by collection id with workspace validation.
 - Added Postman collection import adapter for folders, root request items, query params, headers, raw bodies, and simple auth mapping.
 - Added YAML import parsing support for OpenAPI and Swagger collection files.
 - Added Swagger 2.0 JSON collection import adapter that normalizes legacy operations into persisted request rows.
@@ -56,6 +57,7 @@
 
 ## New
 
+- Updated collection export to download the active selected collection when one is selected, otherwise export the whole workspace.
 - Added in-sheet collection import result summary with persisted collection/request counts and warning display.
 - Updated collection import confirmation to submit raw file content so YAML imports work without browser-side parsing.
 - Moved collection import preview detection from frontend-only logic to the backend preview endpoint.
