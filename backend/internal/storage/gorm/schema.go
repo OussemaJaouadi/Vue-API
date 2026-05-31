@@ -379,6 +379,33 @@ func expectedSchema() []expectedTable {
 			},
 		},
 		{
+			Name: "collection_environment_policies",
+			CreateSQL: strings.Join([]string{
+				"CREATE TABLE collection_environment_policies (",
+				"id text NOT NULL PRIMARY KEY,",
+				"workspace_id text NOT NULL,",
+				"collection_id text NOT NULL,",
+				"environment_id text NOT NULL,",
+				"default_environment numeric NOT NULL DEFAULT false,",
+				"created_at datetime NOT NULL,",
+				"updated_at datetime NOT NULL",
+				")",
+			}, " "),
+			Columns: []expectedColumn{
+				{Name: "id", Type: "text", NotNull: true, PrimaryKey: true, Definition: "id text NOT NULL PRIMARY KEY"},
+				{Name: "workspace_id", Type: "text", NotNull: true, Definition: "workspace_id text NOT NULL"},
+				{Name: "collection_id", Type: "text", NotNull: true, Definition: "collection_id text NOT NULL"},
+				{Name: "environment_id", Type: "text", NotNull: true, Definition: "environment_id text NOT NULL"},
+				{Name: "default_environment", Type: "numeric", NotNull: true, Default: "false", Definition: "default_environment numeric NOT NULL DEFAULT false"},
+				{Name: "created_at", Type: "datetime", NotNull: true, Definition: "created_at datetime NOT NULL"},
+				{Name: "updated_at", Type: "datetime", NotNull: true, Definition: "updated_at datetime NOT NULL"},
+			},
+			Indexes: []expectedIndex{
+				{Name: "idx_collection_env_policies_workspace_collection", Unique: false, Columns: []string{"workspace_id", "collection_id"}, CreateSQL: "CREATE INDEX idx_collection_env_policies_workspace_collection ON collection_environment_policies(workspace_id, collection_id)"},
+				{Name: "idx_collection_env_policies_collection_environment", Unique: true, Columns: []string{"collection_id", "environment_id"}, CreateSQL: "CREATE UNIQUE INDEX idx_collection_env_policies_collection_environment ON collection_environment_policies(collection_id, environment_id)"},
+			},
+		},
+		{
 			Name: "resource_grants",
 			CreateSQL: strings.Join([]string{
 				"CREATE TABLE resource_grants (",

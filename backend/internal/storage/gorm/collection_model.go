@@ -32,3 +32,17 @@ type RequestModel struct {
 }
 
 func (RequestModel) TableName() string { return "requests" }
+
+type CollectionEnvironmentPolicyModel struct {
+	ID                 string `gorm:"primaryKey;column:id"`
+	WorkspaceID        string `gorm:"column:workspace_id;not null;index:idx_collection_env_policies_workspace_collection"`
+	CollectionID       string `gorm:"column:collection_id;not null;uniqueIndex:idx_collection_env_policies_collection_environment;index:idx_collection_env_policies_workspace_collection"`
+	EnvironmentID      string `gorm:"column:environment_id;not null;uniqueIndex:idx_collection_env_policies_collection_environment"`
+	DefaultEnvironment bool   `gorm:"column:default_environment;not null;default:false"`
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+func (CollectionEnvironmentPolicyModel) TableName() string {
+	return "collection_environment_policies"
+}

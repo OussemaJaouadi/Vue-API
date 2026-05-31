@@ -58,7 +58,7 @@ defineProps<{
             <label class="block font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground/80">Default environment</label>
             <div class="flex h-10 items-center gap-3 border-2 border-primary/10 bg-muted/5 px-3 transition-colors hover:border-primary/30">
               <PhLightning class="size-4 text-primary" />
-              <span class="font-mono text-[10px] font-black uppercase tracking-widest text-foreground">{{ policy.defaultEnvironment }}</span>
+              <span class="font-mono text-[10px] font-black uppercase tracking-widest text-foreground">{{ policy.defaultEnvironment || 'Not assigned' }}</span>
             </div>
           </div>
 
@@ -71,6 +71,12 @@ defineProps<{
                 class="border-2 border-primary/15 bg-primary/5 px-2.5 py-1.5 font-mono text-[9px] font-black uppercase tracking-widest text-primary transition-all hover:scale-105"
               >
                 {{ env }}
+              </span>
+              <span
+                v-if="policy.allowedEnvironments.length === 0"
+                class="border-2 border-dashed border-muted-foreground/30 bg-muted/10 px-2.5 py-1.5 font-mono text-[9px] font-black uppercase tracking-widest text-muted-foreground/60"
+              >
+                No environments linked
               </span>
             </div>
           </div>

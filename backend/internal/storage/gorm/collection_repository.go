@@ -60,6 +60,39 @@ func (repo *CollectionRepository) ListRootRequests(ctx context.Context, workspac
 	return repo.ListRequests(ctx, workspaceID, nil)
 }
 
+func (repo *CollectionRepository) ListEnvironmentPolicies(ctx context.Context, workspaceID string, collectionID string) ([]collection.EnvironmentPolicy, error) {
+	var rows []struct {
+		CollectionID          string
+		EnvironmentID         string
+		EnvironmentName       string
+		EnvironmentVisibility string
+		DefaultEnvironment    bool
+	}
+
+	if err := repo.db.WithContext(ctx).
+		Table("collection_environment_policies AS policy").
+		Select("policy.collection_id, policy.environment_id, environments.name AS environment_name, environments.visibility AS environment_visibility, policy.default_environment").
+		Joins("JOIN environments ON environments.id = policy.environment_id").
+		Where("policy.workspace_id = ? AND policy.collection_id = ?", workspaceID, collectionID).
+		Order("environments.sort_order ASC, environments.name ASC").
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	policies := make([]collection.EnvironmentPolicy, 0, len(rows))
+	for _, row := range rows {
+		policies = append(policies, collection.EnvironmentPolicy{
+			CollectionID:          row.CollectionID,
+			EnvironmentID:         row.EnvironmentID,
+			EnvironmentName:       row.EnvironmentName,
+			EnvironmentVisibility: row.EnvironmentVisibility,
+			Default:               row.DefaultEnvironment,
+		})
+	}
+
+	return policies, nil
+}
+
 func (repo *CollectionRepository) CreateFolder(ctx context.Context, params collection.CreateFolderParams) (collection.Folder, error) {
 	var count int64
 	if err := repo.db.WithContext(ctx).Model(&FolderModel{}).
@@ -89,6 +122,62 @@ func (repo *CollectionRepository) CreateFolder(ctx context.Context, params colle
 	}
 
 	return toDomainFolder(model), nil
+}
+
+func (repo *CollectionRepository) SetEnvironmentPolicies(ctx context.Context, params collection.SetEnvironmentPolicyParams) ([]collection.EnvironmentPolicy, error) {
+	err := repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var collectionCount int64
+		if err := tx.Model(&FolderModel{}).
+			Where("id = ? AND workspace_id = ?", params.CollectionID, params.WorkspaceID).
+			Count(&collectionCount).Error; err != nil {
+			return err
+		}
+		if collectionCount == 0 {
+			return collection.ErrFolderNotFound
+		}
+
+		allowed := uniqueStrings(params.AllowedEnvironmentIDs)
+		if params.DefaultEnvironmentID != "" && !containsString(allowed, params.DefaultEnvironmentID) {
+			allowed = append([]string{params.DefaultEnvironmentID}, allowed...)
+		}
+
+		if len(allowed) > 0 {
+			var envCount int64
+			if err := tx.Model(&EnvironmentModel{}).
+				Where("workspace_id = ? AND id IN ?", params.WorkspaceID, allowed).
+				Count(&envCount).Error; err != nil {
+				return err
+			}
+			if envCount != int64(len(allowed)) {
+				return collection.ErrEnvironmentNotFound
+			}
+		}
+
+		if err := tx.Where("workspace_id = ? AND collection_id = ?", params.WorkspaceID, params.CollectionID).
+			Delete(&CollectionEnvironmentPolicyModel{}).Error; err != nil {
+			return err
+		}
+
+		for _, environmentID := range allowed {
+			model := CollectionEnvironmentPolicyModel{
+				ID:                 id.NewUUIDV7(),
+				WorkspaceID:        params.WorkspaceID,
+				CollectionID:       params.CollectionID,
+				EnvironmentID:      environmentID,
+				DefaultEnvironment: environmentID == params.DefaultEnvironmentID,
+			}
+			if err := tx.Create(&model).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return repo.ListEnvironmentPolicies(ctx, params.WorkspaceID, params.CollectionID)
 }
 
 func (repo *CollectionRepository) CreateRequest(ctx context.Context, params collection.CreateRequestParams) (collection.Request, error) {
@@ -224,6 +313,10 @@ func (repo *CollectionRepository) DeleteFolder(ctx context.Context, folderID str
 		return collection.ErrFolderNotFound
 	}
 
+	if err := repo.db.WithContext(ctx).Where("collection_id = ?", folderID).Delete(&CollectionEnvironmentPolicyModel{}).Error; err != nil {
+		return err
+	}
+
 	if err := repo.db.WithContext(ctx).Where("collection_id = ?", folderID).Delete(&RequestModel{}).Error; err != nil {
 		return err
 	}
@@ -280,4 +373,26 @@ func defaultJSON(value string, fallback string) string {
 	}
 
 	return value
+}
+
+func uniqueStrings(values []string) []string {
+	seen := make(map[string]bool, len(values))
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		result = append(result, value)
+	}
+	return result
+}
+
+func containsString(values []string, needle string) bool {
+	for _, value := range values {
+		if value == needle {
+			return true
+		}
+	}
+	return false
 }

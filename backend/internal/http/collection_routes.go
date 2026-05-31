@@ -50,12 +50,18 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 				requestList = append(requestList, requestResponse(req))
 			}
 
+			policies, err := deps.Collections.ListEnvironmentPolicies(c.Request().Context(), workspaceID, folder.ID)
+			if err != nil {
+				return err
+			}
+
 			result = append(result, map[string]any{
-				"id":        folder.ID,
-				"name":      folder.Name,
-				"icon":      folder.Icon,
-				"sortOrder": folder.SortOrder,
-				"requests":  requestList,
+				"id":                folder.ID,
+				"name":              folder.Name,
+				"icon":              folder.Icon,
+				"sortOrder":         folder.SortOrder,
+				"requests":          requestList,
+				"environmentPolicy": environmentPolicyResponse(policies),
 			})
 		}
 
@@ -205,6 +211,41 @@ func RegisterCollectionRoutes(router *echo.Echo, deps CollectionRouteDeps) {
 		}
 
 		return c.JSON(http.StatusOK, collection.PreviewImportContent(req.FileName, req.Content))
+	})
+
+	g.PUT("/:id/environment-policy", func(c echo.Context) error {
+		var req struct {
+			WorkspaceID           string   `json:"workspaceId"`
+			DefaultEnvironmentID  string   `json:"defaultEnvironmentId"`
+			AllowedEnvironmentIDs []string `json:"allowedEnvironmentIds"`
+		}
+		if err := c.Bind(&req); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		}
+		if req.WorkspaceID == "" {
+			return echo.NewHTTPError(http.StatusBadRequest, "workspaceId is required")
+		}
+		if !hasWorkspacePermission(c, deps.Memberships, req.WorkspaceID, auth.PermissionManageCollections) {
+			return echo.NewHTTPError(http.StatusForbidden, "Not authorized to manage collections")
+		}
+
+		policies, err := deps.Collections.SetEnvironmentPolicies(c.Request().Context(), collection.SetEnvironmentPolicyParams{
+			WorkspaceID:           req.WorkspaceID,
+			CollectionID:          c.Param("id"),
+			DefaultEnvironmentID:  req.DefaultEnvironmentID,
+			AllowedEnvironmentIDs: req.AllowedEnvironmentIDs,
+		})
+		if errors.Is(err, collection.ErrFolderNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, "Collection not found")
+		}
+		if errors.Is(err, collection.ErrEnvironmentNotFound) {
+			return echo.NewHTTPError(http.StatusBadRequest, "Environment is not in this workspace")
+		}
+		if err != nil {
+			return err
+		}
+
+		return c.JSON(http.StatusOK, environmentPolicyResponse(policies))
 	})
 
 	g.PUT("/:id", func(c echo.Context) error {
@@ -439,6 +480,28 @@ func requestResponse(req collection.Request) map[string]any {
 		"body":         req.Body,
 		"bodyLanguage": valueOrDefault(req.BodyLanguage, "json"),
 		"authConfig":   decodeJSONOrDefault(req.AuthConfigJSON, map[string]any{}),
+	}
+}
+
+func environmentPolicyResponse(policies []collection.EnvironmentPolicy) map[string]any {
+	allowed := make([]string, 0, len(policies))
+	defaultEnvironment := ""
+	visibility := "project"
+	for _, policy := range policies {
+		allowed = append(allowed, policy.EnvironmentName)
+		if policy.Default || defaultEnvironment == "" {
+			defaultEnvironment = policy.EnvironmentName
+		}
+		if policy.EnvironmentVisibility == "restricted" {
+			visibility = "restricted"
+		}
+	}
+
+	return map[string]any{
+		"defaultEnvironment":  defaultEnvironment,
+		"allowedEnvironments": allowed,
+		"visibility":          visibility,
+		"roles":               []string{"manager", "developer"},
 	}
 }
 

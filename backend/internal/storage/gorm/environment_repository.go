@@ -172,6 +172,9 @@ func (repo *EnvironmentRepository) DeleteEnvironment(ctx context.Context, envID 
 	if err := repo.db.WithContext(ctx).Where("environment_id = ?", envID).Delete(&VariableModel{}).Error; err != nil {
 		return err
 	}
+	if err := repo.db.WithContext(ctx).Where("environment_id = ?", envID).Delete(&CollectionEnvironmentPolicyModel{}).Error; err != nil {
+		return err
+	}
 
 	return nil
 }

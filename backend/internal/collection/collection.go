@@ -78,18 +78,36 @@ type FolderWithRequests struct {
 	Requests []Request
 }
 
+type EnvironmentPolicy struct {
+	CollectionID          string
+	EnvironmentID         string
+	EnvironmentName       string
+	EnvironmentVisibility string
+	Default               bool
+}
+
+type SetEnvironmentPolicyParams struct {
+	WorkspaceID           string
+	CollectionID          string
+	DefaultEnvironmentID  string
+	AllowedEnvironmentIDs []string
+}
+
 var (
-	ErrFolderNotFound  = errors.New("folder not found")
-	ErrRequestNotFound = errors.New("request not found")
-	ErrFolderNameTaken = errors.New("folder name already exists")
+	ErrFolderNotFound      = errors.New("folder not found")
+	ErrRequestNotFound     = errors.New("request not found")
+	ErrFolderNameTaken     = errors.New("folder name already exists")
+	ErrEnvironmentNotFound = errors.New("environment not found")
 )
 
 type Repository interface {
 	ListFolders(ctx context.Context, workspaceID string) ([]Folder, error)
 	ListRequests(ctx context.Context, workspaceID string, collectionID *string) ([]Request, error)
 	ListRootRequests(ctx context.Context, workspaceID string) ([]Request, error)
+	ListEnvironmentPolicies(ctx context.Context, workspaceID string, collectionID string) ([]EnvironmentPolicy, error)
 	CreateFolder(ctx context.Context, params CreateFolderParams) (Folder, error)
 	CreateRequest(ctx context.Context, params CreateRequestParams) (Request, error)
+	SetEnvironmentPolicies(ctx context.Context, params SetEnvironmentPolicyParams) ([]EnvironmentPolicy, error)
 	UpdateFolder(ctx context.Context, id string, params UpdateFolderParams) (Folder, error)
 	UpdateRequest(ctx context.Context, id string, params UpdateRequestParams) (Request, error)
 	ReorderRequests(ctx context.Context, workspaceID string, groups []RequestOrderGroup) error

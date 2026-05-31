@@ -128,6 +128,7 @@ func (r *WorkspaceRepository) Delete(ctx context.Context, id string) error {
 			model any
 		}{
 			{query: "workspace_id = ?", value: id, model: &ResourceGrantModel{}},
+			{query: "workspace_id = ?", value: id, model: &CollectionEnvironmentPolicyModel{}},
 			{query: "workspace_id = ?", value: id, model: &RequestModel{}},
 			{query: "workspace_id = ?", value: id, model: &FolderModel{}},
 			{query: "workspace_id = ?", value: id, model: &EnvironmentModel{}},

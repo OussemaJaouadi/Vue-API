@@ -2,7 +2,6 @@ import { useStorage } from '@vueuse/core'
 
 export function useCollections() {
   const workbench = useWorkbench()
-  const { environments } = useEnvironments()
   const workspaceId = useState<string>('workspace:id', () => '')
 
   const requestCount = computed(() => workbench.treeItems.value.reduce((count, group) => count + group.requests.length, workbench.rootRequests.value.length))
@@ -19,14 +18,12 @@ export function useCollections() {
   })
 
   const environmentPolicyFor = (name: string) => {
-    const envs = environments.value
-    const defaultEnv = envs.length > 0 ? envs[0].name : '—'
-    const allowed = envs.length > 0 ? envs.map((e: any) => e.name) : []
-    return {
-      defaultEnvironment: defaultEnv,
-      allowedEnvironments: allowed,
+    const collection = workbench.treeItems.value.find(group => group.name === name)
+    return collection?.environmentPolicy ?? {
+      defaultEnvironment: '',
+      allowedEnvironments: [],
       visibility: 'project' as const,
-      roles: ['manager', 'developer'],
+      roles: [],
     }
   }
 

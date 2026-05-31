@@ -19,12 +19,20 @@ export interface RequestItem {
   active?: boolean
 }
 
+export interface CollectionEnvironmentPolicy {
+  defaultEnvironment: string
+  allowedEnvironments: string[]
+  visibility: 'project' | 'restricted'
+  roles: string[]
+}
+
 export interface TreeItem {
   id?: string
   name: string
   icon: WorkbenchIconKey
   requests: RequestItem[]
   sortOrder?: number
+  environmentPolicy?: CollectionEnvironmentPolicy
 }
 
 export interface QueryParamItem {
@@ -270,6 +278,7 @@ export function useWorkbench() {
         name: c.name,
         icon: c.icon || 'PhGlobe',
         sortOrder: c.sortOrder,
+        environmentPolicy: c.environmentPolicy,
         requests: c.requests.map(requestFromApi),
       }))
       rootRequests.value = (data.rootRequests || []).map(requestFromApi)

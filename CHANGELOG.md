@@ -4,6 +4,7 @@
 
 ## New
 
+- Added collection environment policy persistence, migration, workspace cleanup, and collection API responses.
 - Added selected collection export by collection id with workspace validation.
 - Added Postman collection import adapter for folders, root request items, query params, headers, raw bodies, and simple auth mapping.
 - Added YAML import parsing support for OpenAPI and Swagger collection files.
@@ -57,6 +58,7 @@
 
 ## New
 
+- Wired Collections policy panel to persisted collection environment policy data instead of deriving mock policy from all environments.
 - Updated collection export to download the active selected collection when one is selected, otherwise export the whole workspace.
 - Added in-sheet collection import result summary with persisted collection/request counts and warning display.
 - Updated collection import confirmation to submit raw file content so YAML imports work without browser-side parsing.

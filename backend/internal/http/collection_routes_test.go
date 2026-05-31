@@ -13,16 +13,23 @@ import (
 	"gorm.io/gorm"
 
 	"vue-api/backend/internal/auth"
+	"vue-api/backend/internal/environment"
 	apihttp "vue-api/backend/internal/http"
 	gormstorage "vue-api/backend/internal/storage/gorm"
 	"vue-api/backend/internal/workspace"
 )
 
 func collectionTestDeps(t *testing.T) (*echo.Echo, string, string) {
-	return collectionTestDepsWithRole(t, "admin")
+	router, token, wsID, _ := collectionTestDepsWithDB(t, "admin")
+	return router, token, wsID
 }
 
 func collectionTestDepsWithRole(t *testing.T, role string) (*echo.Echo, string, string) {
+	router, token, wsID, _ := collectionTestDepsWithDB(t, role)
+	return router, token, wsID
+}
+
+func collectionTestDepsWithDB(t *testing.T, role string) (*echo.Echo, string, string, *gorm.DB) {
 	t.Helper()
 
 	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%s?mode=memory&cache=private", t.Name())), &gorm.Config{})
@@ -94,7 +101,7 @@ func collectionTestDepsWithRole(t *testing.T, role string) (*echo.Echo, string, 
 	})
 	require.NoError(t, err)
 
-	return router, accessToken, ws.ID
+	return router, accessToken, ws.ID, db
 }
 
 func registerCollectionRouteUser(t *testing.T, router *echo.Echo, email string, username string) string {
@@ -209,6 +216,55 @@ func TestCollectionRoutes_GetCollections_WithFoldersAndRequests(t *testing.T) {
 	rootReqs := body["rootRequests"].([]any)
 	require.Len(t, rootReqs, 1)
 	assert.Equal(t, "Health", rootReqs[0].(map[string]any)["name"])
+}
+
+func TestCollectionRoutes_SetEnvironmentPolicyAndListCollections(t *testing.T) {
+	router, token, wsID, db := collectionTestDepsWithDB(t, "admin")
+	environments := gormstorage.NewEnvironmentRepository(db)
+
+	local, err := environments.CreateEnvironment(nil, environment.CreateEnvironmentParams{
+		WorkspaceID: wsID,
+		Name:        "Local",
+		Visibility:  "project",
+	})
+	require.NoError(t, err)
+	staging, err := environments.CreateEnvironment(nil, environment.CreateEnvironmentParams{
+		WorkspaceID: wsID,
+		Name:        "Staging",
+		Visibility:  "restricted",
+	})
+	require.NoError(t, err)
+
+	createResp := performJSON(router, http.MethodPost, "/v1/collections", map[string]string{
+		"workspaceId": wsID,
+		"name":        "Auth",
+		"icon":        "PhKey",
+	}, token)
+	require.Equal(t, http.StatusCreated, createResp.Code)
+
+	var createBody map[string]any
+	require.NoError(t, json.Unmarshal(createResp.Body.Bytes(), &createBody))
+	folderID := createBody["id"].(string)
+
+	policyResp := performJSON(router, http.MethodPut, "/v1/collections/"+folderID+"/environment-policy", map[string]any{
+		"workspaceId":           wsID,
+		"defaultEnvironmentId":  local.ID,
+		"allowedEnvironmentIds": []string{local.ID, staging.ID},
+	}, token)
+	require.Equal(t, http.StatusOK, policyResp.Code)
+
+	getResp := performJSON(router, http.MethodGet, "/v1/collections?workspaceId="+wsID, nil, token)
+	require.Equal(t, http.StatusOK, getResp.Code)
+
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(getResp.Body.Bytes(), &body))
+	collections := body["collections"].([]any)
+	require.Len(t, collections, 1)
+
+	policy := collections[0].(map[string]any)["environmentPolicy"].(map[string]any)
+	assert.Equal(t, "Local", policy["defaultEnvironment"])
+	assert.Equal(t, "restricted", policy["visibility"])
+	assert.Equal(t, []any{"Local", "Staging"}, policy["allowedEnvironments"])
 }
 
 func TestCollectionRoutes_CreateFolder_MissingFields(t *testing.T) {
